@@ -1,0 +1,10 @@
+<template name="articles-directory">
+<vbox id="e3list">
+  <h4>directory:</h4>
+  {{#each e3list}}
+  <div class="" style="margin:5px 0 0 0;">
+    <a href="/edit-article/{{this}}?url={{url}}">{{this}}</a>
+  </div>
+  {{/each}}
+</vbox>
+</template>

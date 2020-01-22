@@ -1,0 +1,22 @@
+<template name="edit_article">
+<vbox style="padding:30px; max-width:50vw; min-width:800px;">
+  <div style="margin:10px;">
+    [ <a href="/articles-directory" class="js-directory">articles directory</a> ]
+    [ <a href="#" class="js-update">update (ctrl-S)</a> ]
+    {{!--
+    [ <a href="{{session 'edit-url'}}">published page</a> ] --}}
+    {{!--
+    {{> bistable x="Y" id=article.sku q=false on="save" off="quit" onClick=article.save_article}}
+     --}}
+  </div>
+
+  <div style="margin: 10px 0 10px 80px; font-family:monospace;">
+  <div>web-page: {{session 'edit-url'}}</div>
+  <div>ai: {{session 'edit-ai'}}</div>
+  <div>sku: {{session 'sku'}}</div>
+  </div>
+  <textarea id="cm_TextArea"
+    style="height:100vh; margin-top:20px;"
+  ></textarea>
+</vbox>
+</template>
