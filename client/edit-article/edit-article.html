@@ -1,5 +1,17 @@
 <template name="edit_article">
-<vbox style="padding:30px; max-width:50vw; min-width:800px;">
+<vbox style="padding:0 30px; max-width:50vw; min-width:800px;">
+  <h4>Editora-Live-Update</h4>
+  <h5>session-id: <code style="font-size:8pt;">{{session 'session-id'}}</code></h5>
+
+  {{#if error_code 'article-not-found'}}
+  {{> edit_article_not_found q=q}}
+  {{/if}}
+
+  {{#if error_code 'multiple'}}
+  {{> edit_article_error$1 q=q}}
+  {{/if}}
+
+  {{#unless q.error}}
   <div style="margin:10px;">
     [ <a href="/articles-directory" class="js-directory">articles directory</a> ]
     [ <a href="#" class="js-update">update (ctrl-S)</a> ]
@@ -18,5 +30,17 @@
   <textarea id="cm_TextArea"
     style="height:100vh; margin-top:20px;"
   ></textarea>
+  {{/unless}}
 </vbox>
+</template>
+
+<template name="edit_article_not_found">
+  <div style="border:2px solid red; margin:30px; padding:10px;">
+    <h5>ERROR</h5>
+    {{q.text}}
+    <br><br>
+    <i style="font-family:times;">Check article number (xid) and selection path</i>
+    <a href="#" class="js-create-article"><h5>Create this article</h5></a>
+
+  </div>
 </template>

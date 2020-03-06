@@ -5,23 +5,30 @@ const assert = require('assert')
 
 Meteor.startup(() => {
   // code to run on server at startup
+  // console.log(`@11: `, www_root.init('/www'))
+  require('./get-e3md.js').init('/www')
 });
 
+Meteor.onConnection((x)=>{
+  console.log(`@11: onConnection `,x)
+  console.log(`@11: onConnection.httpHeaders.host `,x.httpHeaders.host)
+})
 
 Meteor.methods({
   'get-e3data': async (cmd) =>{
     const {get_e3md} = require('./get-e3md.js')
-    const {ai,url} = cmd
-    console.log(`>> get-e3md:`,{cmd})
+    console.log(`@15: >> get-e3md:`,{cmd})
     return await get_e3md(cmd);
   }
 });
 
 Meteor.methods({
   'save-e3data': (cmd) =>{
-    const {url,ai,data,update} = cmd;
-    assert(url);
-    assert(ai);
+    console.log(`@22: save-e3data cmd:`,cmd)
+    const {host,pathname,xid,data,update} = cmd;
+    assert(host);
+    assert(pathname);
+    assert(xid);
     assert(data)
     const {save_e3md} = require('./get-e3md.js')
     return save_e3md(cmd);
@@ -36,3 +43,12 @@ Meteor.methods({
     return e3list(cmd);
   }
 });
+
+
+Meteor.methods({
+  'ping': ()=>{
+    const conn = this.connection; // is it ready ? not sure.
+    console.log(`@50: conn =>`,conn)
+    return conn.id;
+  }
+})

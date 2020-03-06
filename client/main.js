@@ -8,3 +8,30 @@ import './a-directory/articles-directory.js'
 Template.registerHelper('session', function (varName) {
   return Session.get(varName);
 });
+
+
+
+const pulse = 300;
+
+var interval = Meteor.setInterval(function () {
+    cnt++;
+    console.log(cnt,Meteor.default_connection._lastSessionId,Meteor.status())
+  },pulse)
+
+Tracker.autorun(function () {
+  // lets watch Meteor.status().connected becoming true
+  if (Meteor.status().connected) {
+    // clear the interval
+    Meteor.clearInterval(interval);
+    // there will still be a few milliseconds while the connection process completes
+    // so use anothet interval
+    const readyInterval = Meteor.setTimeout(function () {
+      if (Meteor.default_connection._lastSessionId) {
+        Meteor.clearInterval(readyInterval);
+        console.log('session ready', Meteor.default_connection._lastSessionId);
+        Session.set('session-id', Meteor.default_connection._lastSessionId)
+        console.log(Meteor.default_connection)
+      }
+    },pulse)
+  }
+})
