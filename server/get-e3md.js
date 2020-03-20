@@ -564,7 +564,7 @@ module.exports.save_e3md = (cmd)=>{
     if (db) { // open connection
 
       // reformat(data) meta+markup
-      
+
 
       // save into DB.
       db.tvec.write_pagex(
@@ -592,7 +592,7 @@ module.exports.save_e3md = (cmd)=>{
   }
 
 
-  assert(data)
+  assert(data
   assert(md_path)
   assert(md_path.endsWith('.md'));
 
