@@ -592,7 +592,7 @@ module.exports.save_e3md = (cmd)=>{
   }
 
 
-  assert(data
+  assert(data)
   assert(md_path)
   assert(md_path.endsWith('.md'));
 
