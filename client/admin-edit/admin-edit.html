@@ -1,0 +1,31 @@
+<template name="admin-edit">
+<vbox style="padding:0 0px; max-width:50vw; min-width:800px;">
+  <h4 style="margin:2px;">admin-edit</h4>
+  <h5 style="margin:2px;">session-id: <code style="font-size:8pt;">{{session 'session-id'}}</code></h5>
+
+  <span class=""
+    style="margin:10px; font-family:monospace; font-size:8pt; line-height:32pt;
+    padding:5px 10px;
+    _border: 1px solid red;
+    background-color:#b3b3b3;">
+    {{session 'edit-s3fpath'}}
+  </span>
+
+  {{#unless q.error}}
+  {{> status_lights}}
+  <div class="hbox qj" style="margin:0px 0 20px;">
+    <span>
+      <i style="font-family:times">{{session 'edit-status'}}</i>
+    </span>
+    <span>
+      [ <a href="#" class="js-update">commit</a> ]  (ctrl-S)
+    </span>
+  </div>
+
+
+  <textarea id="cm_TextArea"
+    style="height:100vh; margin-top:20px; min-width:700px;"
+  ></textarea>
+  {{/unless}}
+</vbox>
+</template>

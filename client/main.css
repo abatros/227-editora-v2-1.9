@@ -2,3 +2,22 @@ body {
   padding: 10px;
   font-family: sans-serif;
 }
+
+
+.hbox {
+  display:flex;
+  flex-direction: row;
+  wrap: no-wrap;
+}
+
+.qj {
+  justify-content: space-between;
+}
+
+.qc {
+  justify-content: center;
+}
+
+.qr {
+  justify-content: right;
+}

@@ -7,7 +7,33 @@ import FindFiles from 'file-regex';
 import {walk} from './lib/walk-editora.js'
 const massive = require('massive');
 const monitor = require('pg-monitor');
+const mk_html_blueink = require('./lib/mk-html-blueink.js')
 
+/*
+function get_accessKeys() {
+  const env1 = process.env.METEOR_SETTINGS && JSON.parse(process.env.METEOR_SETTINGS)
+  if (env1) {
+    const {accessKeyId, secretAccessKey} = env1;
+    return {accessKeyId, secretAccessKey}
+  }
+  const {accessKeyId, secretAccessKey} = process.env;
+  return {accessKeyId, secretAccessKey}
+}*/
+
+/*
+const env = process.env.METEOR_SETTINGS && JSON.parse(process.env.METEOR_SETTINGS)
+if (!env) {
+  throw new Meteor.Error('FATAL: expecting environment file (.env.json)')
+}
+const museum_assets = env['museum-assets'];
+
+const {accessKeyId, secretAccessKey} = process.env;
+*/
+
+// const {accessKeyId, secretAccessKey} = get_accessKeys();
+
+const s3 = require('./lib/aws-s3.js')(); //({accessKeyId, secretAccessKey})
+console.log({s3})
 /*
       cmd:
       - path to web page (html)
@@ -217,13 +243,73 @@ module.exports.init = function(www_root) {
       console.log(`@217: Postgres connection open.`)
     }
   })
+} // init
+
+function extract_meta(s) {
+  const v = s.split(/\-\-\-/g)
+  switch (v.length) {
+    case 1:
+      console.log(`alert `,v)
+      console.log(`alert s:`,s)
+      return {meta:{}, md:v[0], err:null}
+    case 3: {
+      const meta = yaml.safeLoad(v[1])
+      return {meta, md:v[2], err:null}
+    }
+  }
+
+  return ({err:'Invalid MD-format'});
+} // extract-metadata
 
 
-}
-
-module.exports.get_e3md = function(cmd){
-  const {host, pathname, xid} = cmd
+module.exports.get_e3md = async function(cmd){
+  const {host, pathname, xid, s3fpath} = cmd
   console.log('@226: Entering get-e3data cmd:',{cmd})
+
+  if (s3fpath) { // ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
+    // this takes precedence.
+    // rebuild full-name
+    const {Bucket, Key} = s3.parse_s3filename(s3fpath);
+    // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
+    console.log({Bucket},{Key})
+//    const Key = `${key}/${xid}/${xid}.index.md`;
+    const data = await s3.getObject({Bucket, Key}); //.Body.toString('uft8')
+    if (!data) {
+      console.log(`file-not-found : `,{Bucket},{Key})
+      return {err:'file-not-found'}
+    }
+//    console.log(`@236:`,data.Body)
+
+//    const s = data.Body.toString('utf8');
+//    console.log({s})
+    const {meta, md, err} = extract_meta(data.Body.toString('utf8'));
+    /// console.log(`@239:`, {meta},{md})
+    return {meta, md, err}
+  }
+
+
+throw 'break @259'
+  return test();
+
+  function test() {
+    // get md file from s3://blueink/ya14/1202-Y3K2/1202-Y3K2index.md
+    const data = fs.readFileSync('/home/dkz/blueink-s3/ya14/1202-Y3K2/1202-Y3K2.index.md', 'utf8')
+    console.log({data})
+
+    const v = data.split(/\-\-\-/g)
+    switch (v.length) {
+      case 1:
+        return {meta:{}, md:v[0], err:null}
+      case 3: {
+        const meta = yaml.safeLoad(v[1])
+        return {meta, md:v[2], err:null}
+      }
+    }
+
+    return ({err:'Invalid MD-format'});
+  }
+
+
 
   /****************
 
@@ -232,6 +318,13 @@ module.exports.get_e3md = function(cmd){
 
   *****************/
   console.log(`@234: e3_registry[${host}]:`,!!e3_registry[host])
+
+  if (!e3_registry[host]) {
+    console.log(`ALERT host-not-found `,{host})
+    console.log({e3_registry})
+    throw `ALERT host-not-found `
+  }
+
   if (e3_registry[host].pg) {
     const env = e3_registry[host];
     const db = e3_registry[host].db
@@ -761,3 +854,73 @@ async function lookup_folder(fn,xid) {
   // open fn and look for all md-files
 
 }
+
+
+function dir_Name(o_path) {
+  const {Key} =  s3.parse_s3filename(o_path)
+  const {dir:product} = path.parse(Key)
+  // here we have ex: //blueink/<product>
+  const {dir:dirName} = path.parse(product)
+  return dirName
+}
+
+const template_fn = 's3://blueink/ya14/blueink-page-template-v4.html';
+
+module.exports.commit_s3data = async (cmd) =>{
+  const {s3fpath, data} = cmd;
+
+
+  assert(s3fpath)
+  assert(data)
+  const {Bucket,Key} = s3.parse_s3filename(s3fpath);
+
+  const p1 = {
+    Bucket,
+    Key, //: 'tests/'+Key,
+    Body: data,
+    ACL: 'public-read',
+    ContentType: 'text/md',
+    ContentEncoding : 'utf8',
+  };
+  console.log(`commit_s3data `,{p1})
+  const retv1 = await s3.putObject(p1);
+  console.log({retv1})
+
+  /*
+      rebuild html page
+  */
+
+  const dirName = dir_Name(s3fpath);
+  assert(dirName)
+  assert(template_fn)
+
+  const {meta, md, err} = extract_meta(data);
+  const {html} = await mk_html_blueink({meta,md,s3fpath,dirName,template_fn})
+
+// console.log({html})
+
+  /*
+    compute Key for HTML.
+    THIS is specific to blueink new-products  !!!!!!!!!!!!!!
+    ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
+    each site should have its own conversion.
+  */
+
+  const {dir,name} = path.parse(Key)
+  // name: 1202-Y3K2.index.md
+  const html_Key = path.join(dir,'index.html')
+  console.log({html_Key})
+  const p2 = {
+    Bucket,
+    Key: html_Key, //'tests/1.html', //: 'tests/'+Key,
+//    Body: html,
+    ACL: 'public-read',
+    ContentType: 'text/html',
+    ContentEncoding : 'utf8',
+  }
+
+  console.log({p2})
+
+  const retv2 = await s3.putObject(Object.assign(p2,{Body:html}));
+  return retv2;
+} // commit-s3data

@@ -1,7 +1,7 @@
 <template name="edit_article">
-<vbox style="padding:0 30px; max-width:50vw; min-width:800px;">
-  <h4>Editora-Live-Update</h4>
-  <h5>session-id: <code style="font-size:8pt;">{{session 'session-id'}}</code></h5>
+<vbox style="padding:0 0px; margin-top:0px; max-width:50vw; min-width:800px;">
+  <h4 style="margin:0; line-height:40px;">Editora-Live-Update</h4>
+  <h5 style="margin:0;">session-id: <code style="font-size:8pt;">{{session 'session-id'}}</code></h5>
 
   {{#if error_code 'article-not-found'}}
   {{> edit_article_not_found q=q}}
@@ -11,21 +11,34 @@
   {{> edit_article_error$1 q=q}}
   {{/if}}
 
+  <span class=""
+    style="margin:10px; font-family:monospace; font-size:8pt; line-height:32pt;
+    padding:5px 10px;
+    _border: 1px solid red;
+    background-color:#b3b3b3;">
+    {{session 'edit-s3fpath'}}
+  </span>
+
   {{#unless q.error}}
-  <div style="margin:10px;">
-    [ <a href="/articles-directory" class="js-directory">articles directory</a> ]
-    [ <a href="#" class="js-update">update (ctrl-S)</a> ]
-    {{!--
-    [ <a href="{{session 'edit-url'}}">published page</a> ] --}}
-    {{!--
-    {{> bistable x="Y" id=article.sku q=false on="save" off="quit" onClick=article.save_article}}
-     --}}
+  <div class="hbox qj" style="margin:0px 0 20px;">
+    <span class="hbox js-status-lights">
+      <span class="js-status-light" id="status-ok" color="lightgray" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+      <span class="js-status-light" id="status-orange" color="orange" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+      <span class="js-status-light" id="status-busy" color="#b476ff" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+      <span class="js-status-light" id="status-red" color="red" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+      <span style="font-size:8pt; padding: 5px 10px;">{{session 'edit-message'}}</span>
+    </span>
+    <span>
+    [ <a href="#" class="js-update">commit</a> ]  (ctrl-S)
+     </span>
   </div>
 
   <div style="margin: 10px 0 10px 80px; font-family:monospace;">
+    <!--
   <div>web-page: {{session 'edit-url'}}</div>
   <div>ai: {{session 'edit-ai'}}</div>
   <div>sku: {{session 'sku'}}</div>
+  -->
   </div>
   <textarea id="cm_TextArea"
     style="height:100vh; margin-top:20px;"
