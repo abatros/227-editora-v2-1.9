@@ -2,17 +2,23 @@
 const assert = require('assert')
 const AWS = require('aws-sdk');
 const util = require('util')
+const path = require('path')
 
 const endpoint='us-east-1.linodeobjects.com'
 
 
 function parse_s3filename(fn) {
+  if (! fn.startsWith('s3://')) throw `Invalid s3:// <${fn}>`;
   const v = fn.match(/s3:\/\/([^\/]+)\/(.+)$/)
   if (v && v.length ==3) {
+    const Key = v[2];
+    const {dir,name} = path.parse(Key);
     return {
-      Bucket: v[1], Key: v[2]
+      Bucket: v[1], Key, dir, name
     }
   }
+
+  console.log(`@21 parse_s3filename fn:${fn}`,v)
   return {Bucket:null, Key:null}
 } // parse_s3_filename
 
@@ -81,6 +87,7 @@ function s3connect(env={}) {
     deleteObjects,
     ping: ()=>{return 'pong'},
     headObject, getObjectMetadata: headObject,
+    removeLatestVersion,
   }
 }
 
@@ -155,6 +162,8 @@ async function listObjects(p1) {
 
 async function getObject(p1) {
   const etime = new Date().getTime()
+  //;(! p1.Bucket) &&
+  console.log('@155 ',{p1})
 
   if (typeof p1 == 'string') {
     p1 = parse_s3filename(p1)
@@ -340,4 +349,28 @@ async function headObject(p1) {
       resolve(data)
     })
   })
+}
+
+// ------------------------------------------------------------------------
+
+async function removeLatestVersion(p1) {
+  if (typeof p1 == 'string') {
+    p1 = parse_s3filename(p1)
+  }
+  assert(p1.Bucket)
+  assert(p1.Key)
+
+  const retv1 = await headObject(p1)
+  if (!retv1.VersionId) {
+    console.log(`@357 file-not-found <${Bucket}><${Key}>`,{retv1})
+    return retv1; // noting to delete
+  }
+
+  const {VersionId} = retv1;
+  Object.assign(p1,{VersionId})
+  console.log(`@362 removing latest version <${VersionId}>`,{p1})
+  const retv2 = await deleteObject(p1)
+  console.log(`@363 latest version <${VersionId}> removed :`,{retv2})
+
+  return retv2;
 }

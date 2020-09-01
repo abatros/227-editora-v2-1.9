@@ -29,7 +29,6 @@ let compiled_template;
   const o1 = await s3.getObject({Bucket, Key});
   const template = o1.Body.toString('utf8')
   compiled_template = hb.compile(template);
-  console.log(`@30 compiled template <${Key}>`)
 })();
 
 

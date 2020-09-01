@@ -42,12 +42,14 @@ TP.onRendered(function(){
       Session.set('s3fpath', '<file-not-found>')
       console.log(`@29 `,{err})
       Session.set('status-lights','status-red')
+      Session.set('edit-message','file-not-found@45')
       throw err;
     }
     console.log(`@22 `,{retv})
-    if (retv.err) {
-      console.log(`@34 ${retv.err} allow_create:${allow_create}`)
+    if (retv.error) {
+      console.log(`@34 ${retv.error} allow_create:${allow_create}`)
       Session.set('status-lights','status-red')
+      Session.set('edit-message','file-not-found@52')
       throw "TODO: CREATE DUMMY OBJECT, THEN READ AGAIN."
     }
 
@@ -56,6 +58,8 @@ TP.onRendered(function(){
     Session.set('edit-s3fpath', s3fpath)
     Session.set('status-lights','status-ok')
     document.title = `admin-edit ${s3fpath}`;
+    Session.set('edit-message','ready')
+
   });
 
   // ----------------------------------------------------------------------
@@ -74,6 +78,8 @@ TP.onRendered(function(){
           Session.set('status-lights','status-red')
           throw err; // do things on tp, according to results.
         }
+
+        Session.set('edit-message','commit Ok.')
         Session.set('status-lights','status-ok')
         console.log({retv}) // here is the raw-file content
   //        const tab = window.open('http://localhost:8080/en/new-products/1466','http://localhost:8080/en/new-products/1466')
@@ -81,6 +87,18 @@ TP.onRendered(function(){
   }
 
 }) // onRendered
+
+
+TP.helpers({
+  fileName_or_url() {
+    let s3fn = Session.get('edit-s3fpath')
+    if (s3fn && s3fn.endsWith('.md')) {
+      const {Bucket, subsite, xid} = utils.extract_xid2(s3fn)
+      s3fn = `https://${Bucket}.com/${subsite}/${xid}`; // ~~~~~~~ to be fixed.
+    }
+    return s3fn;
+  }
+})
 
 TP.events({
   'click .js-update': (e,tp)=>{
@@ -144,6 +162,7 @@ FlowRouter.route('/admin-edit', { name: 'admin-edit',
     const {host} = location;
     console.log(`@210: host:${host}`,{location})
     const {s3,create} = queryParams; // full Key for md-file
+    if (!s3) throw 'INVALID PARAM'
     console.log(`@115 `,{create},{s3})
     BlazeLayout.render('admin-edit', {s3,create});
   }

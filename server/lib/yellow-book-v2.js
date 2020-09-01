@@ -14,20 +14,12 @@ const shortid = require('shortid');
 const cheerio = require('cheerio');
 const Massive = require('massive');
 const monitor = require('pg-monitor');
+const utils = require('./utils.js')
+const shared_utils = require('/shared/utils.js')
 
 const verbose =0;
 
-
-module.exports = {
-  compile_template,
-  mk_html,
-  get_md_file,
-  write_html,
-  get_html_fn,
-  html2ts_vector,
-  template_fn: 's3://abatros/yellow/yellow-page-template-v1.html',
-  mk_index1, write_index
-}
+console.log('@33 ',{module})
 
 async function compile_template(template_fn) {
   assert(template_fn.startsWith('s3://'))
@@ -115,8 +107,74 @@ function mk_html_Obsolete({meta, md}) {
   return compiled(Object.assign(meta, {html}));
 }
 
+const cache_template = {
+  template_fn:null,
+  compiled:null,
+  VersionId:null,
+}
+
 
 async function mk_html(p1) {
+  const verbose =1;
+
+  assert(typeof p1 !== 'string', 'Invalid parameters for mk-html')
+  ;(verbose >0) && console.log({p1})
+
+  const {meta,
+    md,
+    subsite = '/',      // from o__path s3://blueink/ya14  => ex: "ya14"
+    template_fn } = p1;
+
+
+  assert(md, 'missing-md-code for mk-html')
+  assert(meta, 'missing-meta for mk-html')
+  assert(template_fn, 'missing-template for mk-html')
+
+  const html1 = md && marked(md, { renderer: renderer });
+
+  meta.shortId = shortid.generate();
+
+  if ((template_fn != cache_template.template_fn)||(! cache_template.compiled)) {
+    cache_template.template_fn =null;
+    cache_template.compiled =  await utils.compile_template(template_fn); // *******************************************
+    cache_template.template_fn =template_fn;
+  }
+
+
+  ;(verbose >0) && console.log(`@137 `,{cache_template})
+  ;(verbose >0) && console.log(`@138 `,{meta})
+
+  const {shortId, img:meta_img, pdf:meta_pdf, ori, sku} = meta;
+
+  /******************
+  specific yellow-book
+
+  *******************/
+
+  const {xid} = meta;
+  assert ((xid.length > 6), `Invalid xid`)
+
+  const o = {
+    xid, // dirName !!!! full xid.
+    sku,
+    ori,
+    subsite, // https://ultimheat.co.th/<subsite>
+    template_fn,
+    shortId,
+    article: html1.replace(/\\rarr[\s]+/g,'&rightarrow;')
+  }
+
+  console.log(`@309 :`, {o})
+
+
+  const html = cache_template.compiled(o);
+
+//  console.log(`@62 :`, {html})
+  return Object.assign(p1,{html});
+}
+
+
+async function mk_html_Obsolete2(p1) {
   const verbose =1;
 
   if (typeof p1 === 'string') {
@@ -158,6 +216,7 @@ async function mk_html(p1) {
   })
 
   console.log(`@159 mk-html `,{meta})
+
 
 
   const html = compiled_template(meta);
@@ -268,8 +327,7 @@ async function html2ts_vector({db, xid, html, dryRun}) {
 
   //meta.xid = xid; // no more need for xid alone.
 
-  meta_tags.h1_html = `
-  <div class="h1-deeps-item">
+  meta_tags.h1_html = `<div class="h1-deeps-item">
     <a href="https://abatros/yellow/${xid}/index.html"
       target="_blank" title="article : ${xid}">${meta_tags.h1}</a>
   </div>
@@ -409,4 +467,81 @@ function mk_index1({xid, html}) {
   // get h1
 
   return {irow: `<div><a href="/yellow/${xid}/index.html">${xid}</a>${meta_tags.h1}</div>`};
+}
+
+// ----------------------------------------------------------------------------
+
+function scan_e3live_data(html) {
+
+  const $ = cheerio.load(html)
+  const meta_tags = utils.get_meta_tags($)
+//  console.log({head_meta})
+  if (! meta_tags['xid']) {
+    console.log(`ALERT e3live.xid is missing, skipping.`)
+    console.log(`@164 `,{meta_tags})
+//    return {};
+  }
+  // console.log(`@158 html.length:${html.length}`,{meta_tags})
+  // get H1
+//  o.h1 = $('section#en h1').text();
+  const article = $('article#main').text();
+  const h1 = $('article#main h1').text();
+
+  meta_tags.h1 = h1; // not pure meta-tag
+
+  const raw_text = article.split(/\r?\n/).join(' ').replace(/\s+/,' ')
+  return {meta_tags, raw_text};
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+function deeps_headline_v1({url,xid,title}) {
+        // this might need custom_hooks.
+  return `<div class="h1-deeps-item">
+      <a href="${url}"
+        target="_blank"
+        title="article : ${xid}">${title}</a>
+    </div>
+    `;
+}
+
+function deeps_headline({url,title, meta, meta_tags, s3fpath:s3fn, path}) {
+
+  const s3fn_ = (s3fn.startsWith('s3://')) ? s3fn.substring(5): s3fn;
+  const {Bucket, subsite, xid} = shared_utils.extract_xid2(s3fn)
+
+  return `<div class="h1-deeps-item">
+      <a href="https://${Bucket}.com/${subsite}/${xid}"
+        target="_blank"
+        title="article : ${xid}">${title}</a>
+        &ensp;
+        &mdash;
+        &ensp;
+        <a target="_blank" href="editora.us/edit?s3=${s3fn_}"> [edit] </a>
+        &emsp;
+        [${path}]
+    </div>
+    `;
+}
+
+
+
+// --------------------------------------------------------------------------
+
+
+module.exports = {
+  moduleId: module.id, //'yellow-book-v2.js',
+  compile_template,
+  scan_e3live_data,
+//  commit_ts_vector,
+  mk_html,
+  get_md_file,
+  write_html,
+  get_html_fn,
+  html2ts_vector,
+  template_fn: 's3://abatros/yellow/yellow-page-template-v1.html',
+  mk_index1, write_index,
+  deeps_headline
 }

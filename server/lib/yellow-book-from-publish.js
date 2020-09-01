@@ -390,7 +390,7 @@ async function commit_s3data(cmd) {
 
   ***********************************/
 
-  const {meta, md, err} = utils.extract_meta(data);
+  const {meta, md, err} = utils.extract_metadata(data);
   const {html} = await mk_html({s3fpath, meta,md})
 
   /************************************

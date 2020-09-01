@@ -9,28 +9,6 @@ const massive = require('massive');
 const monitor = require('pg-monitor');
 const mk_html_blueink = require('./lib/mk-html-blueink.js')
 
-/*
-function get_accessKeys() {
-  const env1 = process.env.METEOR_SETTINGS && JSON.parse(process.env.METEOR_SETTINGS)
-  if (env1) {
-    const {accessKeyId, secretAccessKey} = env1;
-    return {accessKeyId, secretAccessKey}
-  }
-  const {accessKeyId, secretAccessKey} = process.env;
-  return {accessKeyId, secretAccessKey}
-}*/
-
-/*
-const env = process.env.METEOR_SETTINGS && JSON.parse(process.env.METEOR_SETTINGS)
-if (!env) {
-  throw new Meteor.Error('FATAL: expecting environment file (.env.json)')
-}
-const museum_assets = env['museum-assets'];
-
-const {accessKeyId, secretAccessKey} = process.env;
-*/
-
-// const {accessKeyId, secretAccessKey} = get_accessKeys();
 
 const s3 = require('./lib/aws-s3.js')(); //({accessKeyId, secretAccessKey})
 console.log({s3})
@@ -245,7 +223,7 @@ module.exports.init = function(www_root) {
   })
 } // init
 
-function extract_meta(s) {
+function extract_metadata(s) {
   const v = s.split(/\-\-\-/g)
   switch (v.length) {
     case 1:
@@ -273,16 +251,25 @@ module.exports.get_e3md = async function(cmd){
     // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
     console.log({Bucket},{Key})
 //    const Key = `${key}/${xid}/${xid}.index.md`;
-    const data = await s3.getObject({Bucket, Key}); //.Body.toString('uft8')
-    if (!data) {
+    const retv = await s3.getObject({Bucket, Key}); //.Body.toString('uft8')
+    if (!retv) {
       console.log(`file-not-found : `,{Bucket},{Key})
       return {err:'file-not-found'}
     }
-//    console.log(`@236:`,data.Body)
-
+    console.log(`@236:`, {retv})
+    if (retv.error) {
+      //if (retv.error.code == 'NoSuchKey') {}
+      return {meta:null, md:null, error:retv.error.code}
+    }
 //    const s = data.Body.toString('utf8');
 //    console.log({s})
-    const {meta, md, err} = extract_meta(data.Body.toString('utf8'));
+
+    if (!retv.Body) {
+      //if (retv.error.code == 'NoSuchKey') {}
+      return {meta:null, md:null, error:'no-data'}
+    }
+
+    const {meta, md, err} = extract_metadata(retv.Body.toString('utf8'));
     /// console.log(`@239:`, {meta},{md})
     return {meta, md, err}
   }
@@ -894,7 +881,7 @@ module.exports.commit_s3data = async (cmd) =>{
   assert(dirName)
   assert(template_fn)
 
-  const {meta, md, err} = extract_meta(data);
+  const {meta, md, err} = extract_metadata(data);
   const {html} = await mk_html_blueink({meta,md,s3fpath,dirName,template_fn})
 
 // console.log({html})

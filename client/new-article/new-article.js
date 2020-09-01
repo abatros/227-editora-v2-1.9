@@ -15,16 +15,15 @@ FlowRouter.route('/new', { name: 'new-article',
     const {s3} = queryParams;
     console.log(`@13 new-article s3:`,s3)
 
-    Meteor.call('new-article',s3,(err, data)=>{
+    const s3fpath = 's3://'+s3
+    Meteor.call('new-article',s3fpath,(err, data)=>{
       if (err) {
         throw err;
       }
       // here the article was created
 
       console.log(`@24 `,{data})
-      if (data.s3fpath.startsWith('s3://')) data.s3fpath = data.s3fpath.substring(5);
-      console.log(`@26 `,data.s3fpath)
-      Session.set('s3fpath', data.s3fpath)
+      Session.set('s3fpath', s3fpath)
       BlazeLayout.render('edit_article');
     }) // call
   } // action

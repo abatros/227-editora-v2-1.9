@@ -149,7 +149,7 @@ async function commit_s3data(cmd) {
 
   ***********************************/
 
-  const {meta, md, err} = utils.extract_meta(data);
+  const {meta, md, err} = utils.extract_metadata(data);
   if (!meta) {
     console.log(`@155 alert `,{meta},{err},{data})
   }
@@ -262,7 +262,7 @@ async function mk_html({s3fpath, meta, md}) {
   Object.assign(meta, {
     shortid: meta.shortid,
 //    title: meta.h1 || 'title-not-found',
-    article:html1
+    article:html1.replace(/\\rarr[\s]+/g,'&rightarrow;')
   })
 
   console.log(`@159 mk-html `,{meta})

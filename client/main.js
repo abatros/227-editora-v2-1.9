@@ -4,7 +4,7 @@ import { ReactiveVar } from 'meteor/reactive-var';
 import './main.html';
 import './edit-article/edit-article.js'
 import './new-article/new-article.js'
-import './a-directory/articles-directory.js'
+import './directory/subsite-directory.js'
 import './admin-edit/admin-edit.js'
 
 Template.registerHelper('session', function (varName) {

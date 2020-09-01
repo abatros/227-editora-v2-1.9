@@ -2,9 +2,9 @@ const path = require('path')
 const s3 = require('./aws-s3.js')(); //({accessKeyId, secretAccessKey})
 
 Meteor.methods({
-  'new-article': async (s3_) =>{
-    console.log(`new-article <${s3_}>`)
-    const s3fpath = mormalize(s3_, {prefix:'s3://'});
+  'new-article': async (s3fpath) =>{
+    console.log(`new-article <${s3fpath}>`)
+//    const s3fpath = mormalize(s3_, {prefix:'s3://'});
     console.log({s3fpath})
 
     const {Bucket, Key} = s3.parse_s3filename(s3fpath);
@@ -12,7 +12,7 @@ Meteor.methods({
     console.log({Bucket},{Key})
 //    const Key = `${key}/${xid}/${xid}.index.md`;
     const data = await s3.getObject({Bucket, Key}); //.Body.toString('uft8')
-    if (data) {
+    if (data.ETag) {
       return {status:'file-already-exists', data}
     }
 
@@ -34,7 +34,18 @@ xid: ${Key}
     console.log(`commit_s3data `,{p2})
     const retv1 = await s3.putObject(p2);
     console.log({retv1})
-    return {status:'ok', s3fpath}
+
+    const retv = await s3.getObject({Bucket, Key}); //.Body.toString('uft8')
+    if (!retv || retv.error || !retv.Body) {
+      console.log(`file-not-found : `,{Bucket},{Key})
+      return {error:'file-not-found'}
+    }
+
+    const {ETag, VersionId} = retv;
+    return {
+      ETag, VersionId,
+      data: retv.Body.toString('utf8'),
+    }
   }
 })
 
