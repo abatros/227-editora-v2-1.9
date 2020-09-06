@@ -19,12 +19,12 @@ const shared_utils = require('/shared/utils.js')
 
 const verbose =0;
 
-console.log('@33 ',{module})
+;(verbose >0) && console.log('@33 ',{module})
 
 async function compile_template(template_fn) {
   assert(template_fn.startsWith('s3://'))
 
-  const {Bucket, Key} = s3.parse_s3filename(template_fn)
+  const {Bucket, Key} = parse_s3filename(template_fn)
 //  's3://blueink/ya13/blueink-page-template-v4.html')
   const o1 = await s3.getObject({Bucket, Key});
   if (!o1.Body) {
@@ -58,7 +58,7 @@ async function get_md_file_s3(md_fn) {
   // console.log(`@62 body.length:${md_data.length}`)
   const v = md_data.split(/\-\-\-/)
   const meta = yaml.safeLoad(v[1]);
-  const {Bucket,Key} = s3.parse_s3filename(md_fn);
+  const {Bucket,Key} = parse_s3filename(md_fn);
   ;(verbose >0) && console.log(`@71 `,{Bucket},{Key},{meta})
   return({meta, md:v[2],dir:Bucket,name:Key})
 }
@@ -114,8 +114,33 @@ const cache_template = {
 }
 
 
+function mk_html_compiled(p1) {
+  const verbose =0;
+
+  assert(typeof p1 !== 'string', 'Invalid parameters for mk-html')
+  ;(verbose >0) && console.log({p1})
+
+  const {meta,
+    md,
+    subsite = '/',      // from o__path s3://blueink/ya14  => ex: "ya14"
+    compiled } = p1;
+
+  let html1 = md && marked(md, { renderer: renderer });
+  meta.shortId = shortid.generate();
+  html1 = html1.replace(/\\rarr[\s]+/g,'&rightarrow;')
+
+  const o = {
+    article: html1, // .replace(/\\rarr[\s]+/g,'&rightarrow;')
+  }
+
+  const html = compiled(o);
+
+//  console.log(`@62 :`, {html})
+  return Object.assign(p1,{html});
+}
+
 async function mk_html(p1) {
-  const verbose =1;
+  const verbose =0;
 
   assert(typeof p1 !== 'string', 'Invalid parameters for mk-html')
   ;(verbose >0) && console.log({p1})
@@ -130,18 +155,26 @@ async function mk_html(p1) {
   assert(meta, 'missing-meta for mk-html')
   assert(template_fn, 'missing-template for mk-html')
 
-  const html1 = md && marked(md, { renderer: renderer });
-
-  meta.shortId = shortid.generate();
-
   if ((template_fn != cache_template.template_fn)||(! cache_template.compiled)) {
     cache_template.template_fn =null;
     cache_template.compiled =  await utils.compile_template(template_fn); // *******************************************
     cache_template.template_fn =template_fn;
   }
 
-
   ;(verbose >0) && console.log(`@137 `,{cache_template})
+
+
+  Object.assign(p1,{
+    compiled: cache_template.compiled
+  })
+  return mk_html_compiled(p1)
+
+//========================================================================
+
+  const html1 = md && marked(md, { renderer: renderer });
+
+  meta.shortId = shortid.generate();
+
   ;(verbose >0) && console.log(`@138 `,{meta})
 
   const {shortId, img:meta_img, pdf:meta_pdf, ori, sku} = meta;
@@ -164,66 +197,15 @@ async function mk_html(p1) {
     article: html1.replace(/\\rarr[\s]+/g,'&rightarrow;')
   }
 
-  console.log(`@309 :`, {o})
+  ;(verbose >0) && console.log(`@309 :`, {o})
 
 
   const html = cache_template.compiled(o);
 
 //  console.log(`@62 :`, {html})
   return Object.assign(p1,{html});
-}
+} // mk-html
 
-
-async function mk_html_Obsolete2(p1) {
-  const verbose =1;
-
-  if (typeof p1 === 'string') {
-    throw "Invalid parameter for mk_html"
-  }
-  //console.log(`@94 `,{p1})
-  const {meta, md,
-    //s3fpath,
-    compiled_template,
-    href_prefix='./',
-    showHtml
-  } = p1;
-
-  if (!meta.xid) {
-    console.log(`@130 missing meta.xid `,{meta})
-    throw 'break@131'
-  }
-
-  if (! md) {
-    console.log(`@130 missing md-code `,{meta})
-    throw 'break@136'
-  } else {
-    console.log(`@138 md.length:${md.length}`,{meta})
-  }
-
-
-  meta.shortid = shortid.generate()
-  ;(verbose) && console.log(`@143 :`, {meta})
-
-  // split en/th
-  const html1 = md && marked(md, { renderer: renderer });
-  console.log(`@147 html1.length:${html1.length}`)
-  console.log(`@148 `,{html1})
-
-  Object.assign(meta, {
-    shortid: meta.shortid,
-    title: meta.h1 || 'title-not-found',
-    article:html1
-  })
-
-  console.log(`@159 mk-html `,{meta})
-
-
-
-  const html = compiled_template(meta);
-  ;(showHtml) && console.log(`@110 html.length:${html.length}`)
-  ;(verbose) && console.log(`@161 :`, {html})
-  return Object.assign(p1,{html});
-}
 
 
 async function write_html(cmd) {
@@ -233,7 +215,7 @@ async function write_html(cmd) {
   assert(meta.xid);
   assert(o_path)
 
-  const {Bucket, Key:Prefix} = s3.parse_s3filename(o_path)
+  const {Bucket, Key:Prefix} = parse_s3filename(o_path)
 
   //console.log({o_path},{Bucket},{Prefix})
 ///  throw '@208 TODO'
@@ -507,7 +489,7 @@ function deeps_headline_v1({url,xid,title}) {
     `;
 }
 
-function deeps_headline({url,title, meta, meta_tags, s3fpath:s3fn, path}) {
+function deeps_headline({url,title, meta, meta_tags, s3_url:s3fn, path}) {
 
   const s3fn_ = (s3fn.startsWith('s3://')) ? s3fn.substring(5): s3fn;
   const {Bucket, subsite, xid} = shared_utils.extract_xid2(s3fn)

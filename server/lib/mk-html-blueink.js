@@ -3,11 +3,13 @@ const path = require('path')
 const assert = require('assert')
 const yaml = require('js-yaml');
 const shortid = require('shortid');
+const {parse_s3filename} =  require('/shared/utils.js')
 
 const hb = require("handlebars");
 const marked = require('marked');
 const renderer = new marked.Renderer();
 const s3 = require('./aws-s3.js')(); // already initialized.
+
 
 /***
 // consult .config.yaml
@@ -16,7 +18,7 @@ const template = await get_template('s3://blueink/ya13/blueink-page-template-v4.
 const compiled_template = hb.compile(template);
 
 
-const {Bucket, Key} = s3.parse_s3filename(s3Name)
+const {Bucket, Key} = parse_s3filename(s3Name)
 return o1.Body.toString('utf8')
 **/
 
@@ -25,7 +27,7 @@ let compiled_template;
 
 //const compiled_template =
 (async ()=>{
-  const {Bucket, Key} = s3.parse_s3filename(template_fn)
+  const {Bucket, Key} = parse_s3filename(template_fn)
   const o1 = await s3.getObject({Bucket, Key});
   const template = o1.Body.toString('utf8')
   compiled_template = hb.compile(template);
@@ -48,7 +50,7 @@ async function mk_html(p1) {
 
   assert(dirName)
 
-  const {Bucket, Key} = s3.parse_s3filename(s3fpath)
+  const {Bucket, Key} = parse_s3filename(s3fpath)
   const {dir,name} = path.parse(Key)
 
   // split en/th
@@ -85,7 +87,7 @@ async function mk_html(p1) {
 async function get_thai_for(fname) {
   const vebose =0;
 //  const x = path.parse(fname)
-  const {Bucket,Key} = s3.parse_s3filename(fname)
+  const {Bucket,Key} = parse_s3filename(fname)
   ;(verbose >1) && console.log(`@370 get_thai_for(${fname})`,{Key},{Bucket})
 //  const {dir,base} = path.parse(Key)
 //  ;(verbose >1) && console.log({dir})

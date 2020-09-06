@@ -1,0 +1,20 @@
+<template name="right_panel_preview">
+
+  <hbox class="valign-center">
+    preview
+  </hbox>
+
+  <vbox style="
+      flex-grow:1;
+      overflow-y:auto;
+      ">
+      {{{html}}}
+  </vbox>
+
+  <!-- this works too but slower.
+  <iframe style="height:100%;"
+  srcdoc="{{html}}"></iframe>
+  -->
+
+
+</template>

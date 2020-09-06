@@ -1,55 +1,64 @@
+<head>
+<style media="screen">
+  .CodeMirror {
+  border: 1px solid #eee;
+  height: auto;
+}
+</style>
+</head>
+
 <template name="edit_article">
-<vbox style="padding:0 0px; margin-top:0px; max-width:50vw; min-width:800px;">
-  <h4 style="margin:0; line-height:40px;">Editora-Live-Update</h4>
-  <h5 style="margin:0; font-size:9pt;">
-    session-id: <code style="font-size:8pt;">{{session 'session-id'}}</code>
-    &mdash; folder: <code style="font-size:8pt;">{{session 'latest-subsite'}}</code>
-  </h5>
+<hbox class="_qc" style="border:5px solid lightgray; height:100%;
+                         justify-content:center;
+                         align-items: flex-start;
+                         ">
+  <!-- begin left-panel -->
+  <vbox style="border:5px solid lightblue; height:100%;
+               min-width:600px; max-width:800px;
+               flex-grow:1; padding:10px;">
+    {{> edit_panel}}
+  </vbox>
+  <!-- end left-panel -->
 
-  {{#if error_code 'article-not-found'}}
-  {{> edit_article_not_found q=q}}
+  <!-- begin right-panel -->
+  {{#if session 'showing-right-panel'}}
+  <vbox style="border:5px solid lightblue; height:100%;
+    min-width:100px; max-width:700px;
+    flex-grow:1; padding:10px;
+    ">
+
+    <vbox class="space-between"
+      style="height:100%;
+        _justify-content:space-between;
+        border:3px solid yellow;
+        padding-top:10px;">
+
+      {{> right_panel_header}}
+
+      <br>
+
+      {{#if session 'showing-preview-panel'}}
+      {{> right_panel_preview}}
+      {{/if}}
+
+      {{#if session 'showing-directory-panel'}}
+      {{> right_panel_directory}}
+      {{/if}}
+
+      {{#if session 'showing-info-panel'}}
+      {{> right_panel_info}}
+      {{/if}}
+
+      {{#if session 'showing-deep-search-panel'}}
+      {{> right_panel_directory}}
+      {{/if}}
+
+    </vbox>
+  </vbox> <!-- yellow -->
   {{/if}}
+  <!-- end right-panel -->
+</hbox>
 
-  {{#if error_code 'multiple'}}
-  {{> edit_article_error$1 q=q}}
-  {{/if}}
-
-  <span class=""
-    style="margin:10px; font-family:monospace; font-size:8pt; line-height:32pt;
-    padding:5px 10px;
-    _border: 1px solid red;
-    background-color:#b3b3b3;">
-    {{fileName_or_url}}
-  </span>
-
-  {{#unless q.error}}
-  <div class="hbox qj" style="margin:0px 0 20px;">
-    <span class="hbox js-status-lights">
-      <span class="js-status-light" id="status-ok" color="lightgray" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
-      <span class="js-status-light" id="status-orange" color="orange" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
-      <span class="js-status-light" id="status-busy" color="#b476ff" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
-      <span class="js-status-light" id="status-red" color="red" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
-      <span style="font-size:8pt; padding: 5px 10px;">{{session 'edit-message'}}</span>
-    </span>
-    <span>
-      [ <a href="#" class="js-directory">directory</a> ]
-      [ <a href="#" class="js-update">commit</a> ]  (ctrl-S)
-     </span>
-  </div>
-
-  <div style="margin: 10px 0 10px 80px; font-family:monospace;">
-    <!--
-  <div>web-page: {{session 'edit-url'}}</div>
-  <div>ai: {{session 'edit-ai'}}</div>
-  <div>sku: {{session 'sku'}}</div>
-  -->
-  </div>
-  
-  <textarea id="cm_TextArea"
-    style="height:100vh; margin-top:20px;"
-  ></textarea>
-  {{/unless}}
-</vbox>
 </template>
 
 <template name="edit_article_not_found">

@@ -15,7 +15,7 @@ async function new_web_page(argv) {
   ;(verbose >0) && console.log(`> -------------------
     check for existing folder `)
 
-  const {Bucket, Key} = s3.parse_s3filename(in_folder);
+  const {Bucket, Key} = parse_s3filename(in_folder);
 
   const s3cfg = `s3://${Bucket}/${path.join(Key,'.publish.yaml')}`;
   const s3md = `s3://${Bucket}/${path.join(Key,'master.md')}`;
@@ -129,7 +129,7 @@ async function exists_web_page(s3path) {
 
   if (retv1.error) throw retv1.error;
 
-  const {Bucket, Key} = s3.parse_s3filename(s3path);
+  const {Bucket, Key} = parse_s3filename(s3path);
   if (Key.endsWith('.publish.yaml')) {
     return s3path;
   }

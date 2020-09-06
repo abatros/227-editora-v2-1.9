@@ -5,7 +5,10 @@ import './main.html';
 import './edit-article/edit-article.js'
 import './new-article/new-article.js'
 import './directory/subsite-directory.js'
-import './admin-edit/admin-edit.js'
+import './admin-edit/admin-edit.js' // obsolete.
+import './admin/admin.js'
+
+BlazeLayout.setRoot('body');
 
 Template.registerHelper('session', function (varName) {
   return Session.get(varName);
@@ -43,3 +46,17 @@ Tracker.autorun(function () {
     },pulse)
   }
 })
+
+// -------------------------------------------------------------------------
+
+Template.registerHelper('fileName_or_url', function() {
+  let s3fn = Session.get('s3-url')
+  return s3fn;
+
+
+  if (s3fn && s3fn.endsWith('.md')) {
+    const {Bucket, subsite, xid} = utils.extract_xid2(s3fn)
+    s3fn = `https://${Bucket}.com/${subsite}/${xid}`; // ~~~~~~~ to be fixed.
+  }
+  return s3fn;
+});

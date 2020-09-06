@@ -1,0 +1,37 @@
+
+<head>
+  <style media="screen">
+    .right-panel-btn {
+      text-align: center;
+      border: 3px solid lightgray;
+      width:100px;
+      padding: 4px 0px;
+      cursor: pointer;
+    }
+    .right-panel-btn:hover {
+      _border: 3px solid #88ffde;
+      color:#88ffde;
+    }
+
+    div.right-panel-btn.active {
+      border: 3px solid #88ffde;
+      color:#88ffde;
+    }
+  </style>
+</head>
+
+<template name="right_panel_header">
+
+<hbox class="space-evenly">
+  {{> right_panel_btn name="info"}}
+  {{> right_panel_btn name="preview"}}
+  {{> right_panel_btn name="directory"}}
+  {{> right_panel_btn name="deep-search"}}
+</hbox>
+</template>
+
+<template name="right_panel_btn">
+  <div class="right-panel-btn" data="showing-{{name}}-panel">
+    {{name}}
+  </div>
+</template>

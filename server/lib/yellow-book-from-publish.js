@@ -32,7 +32,7 @@ module.exports = {
 async function compile_template(template_fn) {
   assert(template_fn.startsWith('s3://'))
 
-  const {Bucket, Key} = s3.parse_s3filename(template_fn)
+  const {Bucket, Key} = parse_s3filename(template_fn)
 //  's3://blueink/ya13/blueink-page-template-v4.html')
   const o1 = await s3.getObject({Bucket, Key});
   if (!o1.Body) {
@@ -66,7 +66,7 @@ async function get_md_file_s3(md_fn) {
   // console.log(`@62 body.length:${md_data.length}`)
   const v = md_data.split(/\-\-\-/)
   const meta = yaml.safeLoad(v[1]);
-  const {Bucket,Key} = s3.parse_s3filename(md_fn);
+  const {Bucket,Key} = parse_s3filename(md_fn);
   ;(verbose >0) && console.log(`@71 `,{Bucket},{Key},{meta})
   return({meta, md:v[2],dir:Bucket,name:Key})
 }
@@ -170,7 +170,7 @@ async function write_html(cmd) {
   assert(meta.xid);
   assert(o_path)
 
-  const {Bucket, Key:Prefix} = s3.parse_s3filename(o_path)
+  const {Bucket, Key:Prefix} = parse_s3filename(o_path)
 
   //console.log({o_path},{Bucket},{Prefix})
 ///  throw '@208 TODO'
@@ -369,7 +369,7 @@ async function commit_s3data(cmd) {
   const {s3fpath, data} = cmd;
   assert(s3fpath)
   assert(data)
-  const {Bucket,Key} = s3.parse_s3filename(s3fpath);
+  const {Bucket,Key} = parse_s3filename(s3fpath);
 
   const p1 = {
     Bucket,

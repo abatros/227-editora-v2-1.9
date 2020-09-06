@@ -1,0 +1,55 @@
+<template name="right_panel_info">
+
+<hbox class="valign-center">
+<h2>Versions</h2>
+&emsp; <i class="fa fa-arrow-right"></i>
+&emsp;
+<button class="js-purge">[ purge ]</button>
+&emsp;
+<button class="js-refresh">[ refresh ]</button>
+</hbox>
+
+<vbox style="
+    __flex-grow:1;
+    overflow-y:auto;
+    ">
+{{#each versions}}
+<form ETag="{{this.ETag}}" VersionId="{{this.VersionId}}">
+<div class="hbox-qj directory-item"
+  style="margin:5px 0 0 0; padding: 0px 5px 0px 0px;"
+  title="{{this.VersionId}}">
+  <div class="hbox" style="flex-grow:1;">
+    <div class="table-cell" style="width:10px;">
+      {{#if this.IsLatest}}
+      *
+      {{/if}}
+    </div>
+    <button type="submit" name="button1">
+      {{this.lastModified}}
+    </button>
+
+    &emsp;
+    [{{this.Size}}]
+    &emsp;
+  </div>
+
+  <div class="hbox">
+    {{#if this.IsLatest}}
+    <button type="submit" name="delete-btn">
+      [ delete ]
+    </button>
+    {{else}}
+    <!--
+    <button type="submit" name="mk-live">
+      [ live ]
+    </button>
+    -->
+    {{/if}}
+  </div>
+
+</div>
+</form>
+{{/each}}
+
+</vbox>
+</template>

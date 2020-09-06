@@ -1,13 +1,13 @@
 const path = require('path')
 const s3 = require('./aws-s3.js')(); //({accessKeyId, secretAccessKey})
-
+const {parse_s3filename} =  require('/shared/utils.js')
 Meteor.methods({
   'new-article': async (s3fpath) =>{
     console.log(`new-article <${s3fpath}>`)
 //    const s3fpath = mormalize(s3_, {prefix:'s3://'});
     console.log({s3fpath})
 
-    const {Bucket, Key} = s3.parse_s3filename(s3fpath);
+    const {Bucket, Key} = parse_s3filename(s3fpath);
     // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
     console.log({Bucket},{Key})
 //    const Key = `${key}/${xid}/${xid}.index.md`;

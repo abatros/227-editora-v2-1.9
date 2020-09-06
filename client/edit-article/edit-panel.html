@@ -1,0 +1,62 @@
+<template name="edit_panel">
+<vbox class="_qj"
+  style="height:100%;justify-content:space-between; border:3px solid yellow;">
+  <div class="hbox qc">
+    <h4 style="margin:0; line-height:20px;">Editora-s3 &emsp; Live Update</h4>
+    <h5 style="margin:0; font-size:9pt;">
+      {{!--
+      session-id: <code style="font-size:8pt;">{{session 'session-id'}}</code>
+      &mdash; folder: <code style="font-size:8pt;">{{session 'latest-subsite'}}</code>
+      --}}
+    </h5>
+  </div>
+
+
+  <div class="vbox" style="margin:0px 0 20px;">
+    <hbox>
+      <span class=""
+        style="margin:10px; font-family:monospace; font-size:9pt;
+        line-height:20pt; min-height:20pt;
+        padding:3px 10px;
+        _border: 1px solid red;
+        background-color:#b3b3b3;
+        flex-grow:1;">
+        {{fileName_or_url}}
+        {{#if session 'isLatest'}}
+        &emsp; &mdash; &ensp; live revision
+        {{else}}
+        &emsp; &mdash; &ensp; {{session 'lastModified'}}
+        {{/if}}
+      </span>
+      <span style="flex-grow:0; width:50px; padding: 0 0 0 10px;">
+        <a href="" class="js-toggle-right-panel" style="text-decoration: none;">
+          <i class="fa fa-arrow-right"></i>
+        </a>
+      </span>
+    </hbox>
+    <div class="hbox qj">
+      <span class="hbox js-status-lights">
+        <span class="js-status-light" id="status-ok" color="lightgray" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+        <span class="js-status-light" id="status-orange" color="orange" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+        <span class="js-status-light" id="status-busy" color="#b476ff" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+        <span class="js-status-light" id="status-red" color="red" style="display:table-cell; min-width:15px; height:15px; background-color:transparent; margin:3px; border:1px solid gray;"></span>
+        <span style="font-size:8pt; padding: 5px 10px;">{{status_message}}</span>
+      </span>
+      <span>
+        <!--
+        [ <a href="#" class="js-directory">directory</a> ] -->
+        [ <a href="#" class="js-quit">quit</a> ]
+        [ <a href="#" class="js-update">commit</a> ]  (ctrl-S)
+       </span>
+    </div>
+  </div>
+
+  <div class="vbox" style="flex-grow:1; border:3px solid orange; overflow-y:auto;">
+    <textarea id="cm_TextArea"
+      style="height:100%; width:100%; margin-top:20px; _max-height:50%;"
+    ></textarea>
+  </div>
+
+
+</vbox>
+</template>

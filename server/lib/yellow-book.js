@@ -72,7 +72,7 @@ let compiled_template;  // a function
 async function get_compiled_template() {
   if (compiled_template) return compiled_template;
 
-  const {Bucket, Key} = s3.parse_s3filename(template_fn)
+  const {Bucket, Key} = parse_s3filename(template_fn)
   const o1 = await s3.getObject({Bucket, Key});
   const template = o1.Body.toString('utf8')
   compiled_template = hb.compile(template);
@@ -126,7 +126,7 @@ async function commit_s3data(cmd) {
   const {s3fpath, data} = cmd;
   assert(s3fpath)
   assert(data)
-  const {Bucket,Key} = s3.parse_s3filename(s3fpath);
+  const {Bucket,Key} = parse_s3filename(s3fpath);
   ;(verbose >0) && console.log(`@90 Key:${Key}`)
 
 

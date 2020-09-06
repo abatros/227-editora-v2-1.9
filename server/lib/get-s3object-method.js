@@ -36,7 +36,7 @@ async function get_s3object(cmd) {
 
   if (s3fpath) { // ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
 
-    const {Bucket, Key} = s3.parse_s3filename(s3fpath);
+    const {Bucket, Key} = parse_s3filename(s3fpath);
     // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
     console.log({Bucket},{Key})
 //    const Key = `${key}/${xid}/${xid}.index.md`;

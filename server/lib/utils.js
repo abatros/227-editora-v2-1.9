@@ -4,7 +4,8 @@ const yaml = require('js-yaml')
 const path = require('path')
 const s3 = require('./aws-s3.js')(process.env); // for s3-Keys
 const hb = require("handlebars");
-
+const {s3fix} =  require('/shared/utils.js')
+const {parse_s3filename} = require('/shared/utils.js')
 
 module.exports.extract_meta_Moved__to_Shared = function(s) {
   const v = s.split(/\-\-\-/g)
@@ -83,9 +84,10 @@ async function get_yaml_object (s3path) {
 
   ;(verbose >0) && console.log(`@426 Entering get_yaml_object(${s3path})`)
 
+  s3path = s3fix(s3path)
   if (!s3path.startsWith('s3://')) throw `@68 Invalid s3path <${s3path}>`;
 
-  const {Bucket, Key, dir, name} = s3.parse_s3filename(s3path)
+  const {Bucket, Key, dir, name} = parse_s3filename(s3path)
 
   /*
   const retv = await s3.getObjectMetadata(s3path)
@@ -142,7 +144,7 @@ module.exports.setCustom = function (format) {
     find parent directory
     *****************/
     assert(format.endsWith('index.md'))
-    const {Bucket,Key} =  s3.parse_s3filename(format);
+    const {Bucket,Key} =  parse_s3filename(format);
     const {dir,name} =  path.parse(Key);
     assert (name == 'index.md')
 
@@ -198,7 +200,7 @@ module.exports.read_directory = async function (fpath) {
 module.exports.compile_template = async function(template_fn) {
   assert(template_fn.startsWith('s3://'))
 
-  const {Bucket, Key} = s3.parse_s3filename(template_fn)
+  const {Bucket, Key} = parse_s3filename(template_fn)
 //  's3://blueink/ya13/blueink-page-template-v4.html')
   const o1 = await s3.getObject({Bucket, Key});
   if (!o1.Body) {
@@ -254,7 +256,7 @@ module.exports.get_meta_tags = function ($) { // HEAD
 /*
 module.exports.putObject(s3path, data) {
 
-  const {Bucket,Key} = s3.parse_s3filename(s3fpath);
+  const {Bucket,Key} = parse_s3filename(s3fpath);
 
   const p1 = {
     Bucket,
@@ -294,14 +296,13 @@ module.exports.putObject(s3path, data) {
 */
 
 module.exports.putObject = async function (cmd) {
-  let {s3fpath, data:Body} = cmd
-  const {host, pathname, xid} = cmd
-  console.log('@17: Entering put-s3object ',{cmd})
+  const verbose =1;
 
-  if (!s3fpath.startsWith('s3://')) {
-    s3fpath = 's3://'+s3fpath;
-    throw `@307 utils::putObject invalid s3fpath <${s3fpath}>`
-  }
+  let {s3_url, data:Body} = cmd
+  const {host, pathname, xid} = cmd
+  ;(verbose >0) && console.log('@17: Entering put-s3object ',{cmd})
+
+  s3_url = s3fix(s3_url);
 
   function content_type(fn) {
     const {ext} = path.parse(fn);
@@ -316,11 +317,11 @@ module.exports.putObject = async function (cmd) {
     return 'application/text';
   }
 
-  if (s3fpath) { // ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
+  if (s3_url) { // ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
 
-    const {Bucket, Key} = s3.parse_s3filename(s3fpath);
+    const {Bucket, Key} = parse_s3filename(s3_url);
     // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
-    console.log({Bucket},{Key})
+    ;(verbose >0) && console.log({Bucket},{Key})
 //    const Key = `${key}/${xid}/${xid}.index.md`;
     const p2 = {
         Bucket,
@@ -330,11 +331,11 @@ module.exports.putObject = async function (cmd) {
         ContentType: content_type(Key),
         ContentEncoding : 'utf8',
     };
-    console.log(`put_s3object `,{p2})
+    ;(verbose >0) && console.log(`put_s3object `,{p2})
     const retv1 = await s3.putObject(p2);
-    console.log({retv1})
+    ;(verbose >0) && console.log({retv1})
 
-    return {status:'ok', s3fpath, Bucket, Key}
+    return {status:'ok', s3_url, Bucket, Key}
   } // s3fpath
 
   throw '@38 MUST BE S3://BUCKET'

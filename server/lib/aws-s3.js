@@ -3,24 +3,13 @@ const assert = require('assert')
 const AWS = require('aws-sdk');
 const util = require('util')
 const path = require('path')
+const {parse_s3filename} = require('/shared/utils.js')
 
 const endpoint='us-east-1.linodeobjects.com'
 
 
-function parse_s3filename(fn) {
-  if (! fn.startsWith('s3://')) throw `Invalid s3:// <${fn}>`;
-  const v = fn.match(/s3:\/\/([^\/]+)\/(.+)$/)
-  if (v && v.length ==3) {
-    const Key = v[2];
-    const {dir,name} = path.parse(Key);
-    return {
-      Bucket: v[1], Key, dir, name
-    }
-  }
 
-  console.log(`@21 parse_s3filename fn:${fn}`,v)
-  return {Bucket:null, Key:null}
-} // parse_s3_filename
+// -------------------------------------------------------------------------
 
 let s3client;
 
@@ -161,33 +150,42 @@ async function listObjects(p1) {
 }
 
 async function getObject(p1) {
+  const verbose =0;
   const etime = new Date().getTime()
-  //;(! p1.Bucket) &&
-  console.log('@155 ',{p1})
 
   if (typeof p1 == 'string') {
     p1 = parse_s3filename(p1)
   }
 
-  ;(! p1.Bucket) && console.log('@155 ',{p1})
-  assert(p1.Bucket); assert(p1.Key)
+  ;(verbose >0) && console.log('@155 ',{p1})
+
+  assert(p1.Bucket, '@173 getObject missing Bucket');
+  assert(p1.Key, '@174 getObject missing Key')
+  // we migt have VersionId. here
+
+
+  const {Bucket,  Key, VersionId} = p1;
+  const p1_ = {Bucket,  Key, VersionId};
 
   return new Promise((resolve, reject) =>{
-    const o1 = s3client.getObject(p1, (err,data)=>{
+    const o1 = s3client.getObject(p1_, (err,data)=>{
       if (err) {
-        // console.log(`@132:`,{err})
+        ;(verbose >0) && console.log(`@132:`,{err})
         if (err.code == 'NoSuchKey') {
           resolve({error:err}); return;
         }
         reject(err)
         return;
       }
+      //console.log(`@180 getObject `,{data})
       resolve(Object.assign(data,{
         etime: new Date().getTime()-etime
       }))
     })
   })
 }
+
+// --------------------------------------------------------------------------
 
 async function getObject_Obsolete(p1) {
   const etime = new Date().getTime()
@@ -242,14 +240,16 @@ async function readdir_chunk(p1) {
 }
 
 async function readdir(p1) {
+  const verbose =0;
 
   if (typeof p1 == 'string') {
+    if (! p1.startsWith('s3://')) p1 = 's3://'+p1;
     const {Bucket, Key} = parse_s3filename(p1)
     const Prefix = (Key.endsWith('/'))?Key:Key+'/';
     p1 = {Bucket, Prefix, Delimiter:'/'}
   }
-  assert(p1.Bucket)
-
+  assert(p1.Bucket, 'Bucket is Missing (readdir)')
+  ;(verbose >0) && console.log(`@253 `,{p1})
 
 //  const {Bucket, Prefix, Delimiter, verbose=0} = p1;
 //  const pi = Object.assign({},{Bucket, Prefix, Delimiter})
@@ -257,17 +257,25 @@ async function readdir(p1) {
   while (true) {
     const data = await readdir_chunk(p1);
     //;(verbose>0) &&
-    console.log(`@198 readdir:`,data.CommonPrefixes)
+    ;(verbose >0) && console.log(`@197 readdir:`,data)
+    ;(verbose >0) && console.log(`@198 readdir:`,data.CommonPrefixes)
     list.push(...data.CommonPrefixes)
     if (!data.IsTruncated) break;
     pi.ContinuationToken = data.NextContinuationToken;
   }
+
+  ;(verbose >0) && console.log(`@268 `,{list})
   return list;
 }
 
 
 async function listObjectVersions(p1) {
-  const {Bucket, Key, Delimiter} = p1;
+
+  if (typeof p1 == 'string') {
+    p1 = parse_s3filename(p1)
+  }
+
+  const {Bucket, Key, Delimiter='/'} = p1;
   const {Prefix=Key} = p1;
 
   const p2 = {
@@ -284,6 +292,16 @@ async function listObjectVersions(p1) {
         return;
       }
 //      console.log(`@112: `, data.getCommonPrefixes())
+      /*
+        data
+          Name (Bucket name)
+          Prefix
+          Versions []
+            ETag, Size, Key, VersionId, IsLatest, LastModified
+          DeleteMarkers []
+           Key, VersionId, IsLatest, LastModified
+          CommonPrefixes []
+      */
       resolve(data)
     })
   })
@@ -292,10 +310,18 @@ async function listObjectVersions(p1) {
 
 async function deleteObject(p1) {
 
+  if (typeof p1 == 'string') {
+    p1 = parse_s3filename(p1)
+  }
+
+  const {Bucket,  Key, VersionId} = p1;
+  assert(p1.Bucket)
+  assert(p1.Key)
+
+  const p1_ = {Bucket,  Key, VersionId};
+
   return new Promise((resolve,reject)=>{
-    assert(p1.Bucket)
-    assert(p1.Key)
-    s3client.deleteObject(p1, (err,data)=>{
+    s3client.deleteObject(p1_, (err,data)=>{
       if (err) {
         console.log({err})
         reject(err)

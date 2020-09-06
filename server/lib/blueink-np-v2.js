@@ -10,6 +10,7 @@ const renderer = new marked.Renderer();
 const s3 = require('./aws-s3.js')(); // already initialized.
 const utils = require('./utils.js')
 const shared_utils = require('/shared/utils.js')
+const {parse_s3filename} =  require('/shared/utils.js')
 
 const cheerio = require('cheerio');
 
@@ -40,7 +41,7 @@ async function commit_s3data(cmd) {
     commit-s3data (1) write md-file`);
 
 
-  const {Bucket,Key} = s3.parse_s3filename(s3fpath);
+  const {Bucket,Key} = parse_s3filename(s3fpath);
 
   const p1 = {
     Bucket,
@@ -183,7 +184,9 @@ function mk_h1_html_Obsolete(xid,h1) {
   `;
 }
 
-function deeps_headline({url,title, meta, meta_tags, s3fpath:s3fn, path}) {
+// ------------------------------------------------------------------------
+
+function deeps_headline({url,title, meta, meta_tags, s3_url:s3fn, path}) {
 
   const s3fn_ = (s3fn.startsWith('s3://')) ? s3fn.substring(5): s3fn;
   const {Bucket, subsite, xid} = shared_utils.extract_xid2(s3fn)
@@ -218,7 +221,7 @@ function deeps_headline({url,title, meta, meta_tags, s3fpath:s3fn, path}) {
 // ---------------------------------------------------------------------------
 
 function dir_Name(o_path) {
-  const {Key} =  s3.parse_s3filename(o_path)
+  const {Key} =  parse_s3filename(o_path)
   const {dir:product} = path.parse(Key)
   // here we have ex: //blueink/<product>
   const {dir:dirName} = path.parse(product)
@@ -323,7 +326,7 @@ async function mk_html(p1) {
 
   assert(dirName)
 
-  const {Bucket, Key} = s3.parse_s3filename(s3fpath)
+  const {Bucket, Key} = parse_s3filename(s3fpath)
   const {dir,name} = path.parse(Key)
 
   // split en/th

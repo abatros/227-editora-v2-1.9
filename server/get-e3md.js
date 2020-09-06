@@ -9,7 +9,6 @@ const massive = require('massive');
 const monitor = require('pg-monitor');
 const mk_html_blueink = require('./lib/mk-html-blueink.js')
 
-
 const s3 = require('./lib/aws-s3.js')(); //({accessKeyId, secretAccessKey})
 console.log({s3})
 /*
@@ -186,7 +185,8 @@ async function find_md_path(o) {
 
 const e3_registry = {};
 
-module.exports.init = function(www_root) {
+
+function init(www_root) {
   files = walk(www_root)
   console.log(`@186: files=>`,files)
   files.forEach(fn => {
@@ -240,14 +240,15 @@ function extract_metadata(s) {
 } // extract-metadata
 
 
-module.exports.get_e3md = async function(cmd){
+
+async function get_e3md(cmd){
   const {host, pathname, xid, s3fpath} = cmd
   console.log('@226: Entering get-e3data cmd:',{cmd})
 
   if (s3fpath) { // ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
     // this takes precedence.
     // rebuild full-name
-    const {Bucket, Key} = s3.parse_s3filename(s3fpath);
+    const {Bucket, Key} = parse_s3filename(s3fpath);
     // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
     console.log({Bucket},{Key})
 //    const Key = `${key}/${xid}/${xid}.index.md`;
@@ -623,7 +624,8 @@ function extract_html(fn, xid) {
 }
 
 
-module.exports.save_e3md = (cmd)=>{
+
+function save_e3md(cmd) {
   console.log(`\n\n@373: save_e3md cmd:`,cmd)
   const {host,pathname,xid,md_path,update} = cmd;
   let {data} = cmd;
@@ -819,7 +821,8 @@ module.exports.save_e3md = (cmd)=>{
 } // if (update-requested)
 
 
-module.exports.e3list = (cmd)=>{
+
+function e3list(cmd) {
   const {url} = cmd;
   const web_fn = path.join('/www/editora-registry',url);
   return new Promise((resolve,reject)=>{
@@ -844,7 +847,7 @@ async function lookup_folder(fn,xid) {
 
 
 function dir_Name(o_path) {
-  const {Key} =  s3.parse_s3filename(o_path)
+  const {Key} =  parse_s3filename(o_path)
   const {dir:product} = path.parse(Key)
   // here we have ex: //blueink/<product>
   const {dir:dirName} = path.parse(product)
@@ -853,13 +856,14 @@ function dir_Name(o_path) {
 
 const template_fn = 's3://blueink/ya14/blueink-page-template-v4.html';
 
-module.exports.commit_s3data = async (cmd) =>{
+
+async function commit_s3data (cmd) {
   const {s3fpath, data} = cmd;
 
 
   assert(s3fpath)
   assert(data)
-  const {Bucket,Key} = s3.parse_s3filename(s3fpath);
+  const {Bucket,Key} = parse_s3filename(s3fpath);
 
   const p1 = {
     Bucket,
@@ -911,3 +915,12 @@ module.exports.commit_s3data = async (cmd) =>{
   const retv2 = await s3.putObject(Object.assign(p2,{Body:html}));
   return retv2;
 } // commit-s3data
+
+
+module.exports = {
+  init,
+//  get_e3md,
+//  save_e3md,
+//  e3list,
+//  commit_s3data,
+}

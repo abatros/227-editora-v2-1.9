@@ -1,0 +1,59 @@
+<head>
+  <style media="screen">
+    .directory-item {
+      cursor: pointer;
+      padding: 0px 5px;
+    }
+    .directory-item:hover {
+      __color: #88ffdd;
+      background-color: lightgray;
+    }
+    button {
+      padding:0;
+      border:none;
+      background:none;
+      outline: none;
+      box-shadow: none;
+    }
+    .sammy-nowrap-2 {
+    _border-radius: 6px;
+    _background-color: aliceblue;
+    _border: 2px dashed gray;
+    _max-width: 70%;
+    _padding: 1em;
+    _margin-bottom: .4em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+   </style>
+</head>
+
+<template name="right_panel_directory">
+  <div class="hbox qc" style="padding:5px 0px;">
+    <form class="js-lookup">
+    <input type="text" name="dirName" style="height:16pt;">
+    <button type="submit"
+    style="padding-left:10px;font-size:14pt;"
+    ><i class="fa fa-arrow-right"></i></button>
+    </form>
+  </div>
+
+  <vbox style="
+      overflow-y:auto;
+      flex-grow:1;
+      border: 3px solid orange;
+      font-family:monospace; font-size:9pt; line-height:12pt; padding:5px;
+      ">
+
+    {{#each sdir}}
+    <form _name="dir-entry" name="{{this}}">
+    <hbox class="qj directory-item" >
+      <button class="sammy-nowrap-2" style="flex-grow:1; text-align:left;" type="submit" name="preview"
+        >{{this}}</button>
+      <button style="_flex-grow:0;white-space: nowrap;" type="submit" name="edit">[ edit ]</button>
+    </hbox>
+    </form>
+    {{/each}}
+  </vbox>
+</template>
