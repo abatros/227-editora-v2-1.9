@@ -858,6 +858,8 @@ const template_fn = 's3://blueink/ya14/blueink-page-template-v4.html';
 
 
 async function commit_s3data (cmd) {
+  throw 'Obsolete';
+  
   const {s3fpath, data} = cmd;
 
 

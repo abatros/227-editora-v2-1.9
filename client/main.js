@@ -7,6 +7,9 @@ import './new-article/new-article.js'
 import './directory/subsite-directory.js'
 import './admin-edit/admin-edit.js' // obsolete.
 import './admin/admin.js'
+import './user-admin/user-admin.js'
+import './welcome/welcome.js'
+import './btests/btests.js'
 
 BlazeLayout.setRoot('body');
 
@@ -52,11 +55,12 @@ Tracker.autorun(function () {
 Template.registerHelper('fileName_or_url', function() {
   let s3fn = Session.get('s3-url')
   return s3fn;
-
+  /*
 
   if (s3fn && s3fn.endsWith('.md')) {
     const {Bucket, subsite, xid} = utils.extract_xid2(s3fn)
     s3fn = `https://${Bucket}.com/${subsite}/${xid}`; // ~~~~~~~ to be fixed.
   }
   return s3fn;
+  */
 });

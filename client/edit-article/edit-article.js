@@ -3,6 +3,7 @@ const path = require('path')
 const assert = require('assert');
 const yaml = require('js-yaml')
 
+import {parse_s3filename} from '/shared/utils.js'
 import './edit-article.html'
 import './edit-panel.js'
 // import './preview-panel.js'
@@ -10,7 +11,7 @@ import './right-panel-header.js'
 import './right-panel-preview.js'
 import './right-panel-info.js'
 import './right-panel-directory.js'
-import './right-panel-deeps.js'
+import './right-panel-deep-search.js'
 
 
 import utils from '/shared/utils.js'
@@ -74,274 +75,33 @@ function commit_article(tp) {
 
 
 TP.onCreated(function(){
+  const tp = this;
+  etime = new Date().getTime();
   const etime_ = new Date().getTime();
   console.log(`@18: Meteor.connection `,Meteor.connection)
   /*
         async : get MD file associated with this article.
         wait onRendered to initialize codeMirror.
   */
-  const tp = this;
-  etime = new Date().getTime();
   // console.log(`@139 [${new Date().getTime()-etime}] Template.edit_article.onCreated.data:\n`,tp.data)
 
   //tp.data.save_article = tp.save_article;
   //console.log(`@33 done with Template.edit_article.onCreated [${new Date().getTime() - etime1} ms]`)
   Session.set('edit-message','loading...')
-  Session.set('showing-right-panel',false)
+  if (Session.get('workspace')) {
+    Session.set('showing-right-panel',true);
+    Session.set('showing-directory-panel',true);
+  } else {
+    Session.set('showing-right-panel',false);
+  }
 })
+
 
 TP.onRendered(function() {
   const tp = this;
   const etime_ = new Date().getTime();
-return;
-  const s3 = Session.get('s3'); // from router
+})
 
-  /********************
-    protocol ????
-  *********************/
-  //const s3fpath = Session.get('s3fpath');
-  const s3fpath = tp.data.s3fpath();
-  Session.set('s3fpath',s3fpath) // after validation
-  const flags = tp.data.flags();
-
-  assert(s3fpath.startsWith('s3://'), `Syntax error s3path <${s3fpath}>`)
-
-  const xid = Session.get('xid');
-  ;(verbose) && console.log(`@74 edit_article.onRendered
-    s3fpath:${s3fpath}
-    `);
-
-  // that is specific to blueink new-products.... NO-good
-
-  function fix(fn) {
-    // must be md-file
-    const v = fn.split('/');
-    const k = v.length;
-    if (v[k-1].endsWith('.md')) v[k-1] = 'index.md' // fix blueink
-    else v.push('index.md') // this allow missing name (implicit)
-    return v.join('/')
-  }
-
-  //tp.s3fpath = (s3fpath)? 's3://'+s3fpath : `s3://${s3}/${xid}/${xid}.index.md` // blueink
-  tp.s3fpath = s3fpath; // was fixed by router   fix(s3fpath)
-  //  const s3fpath = 's3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md'
-//    tp.s3fpath = s3fpath;
-
-  //tp.cm = install_codeMirror(tp);
-
-  const etime2 = new Date().getTime();
-
-  const status_lights = tp.findAll('span.js-status-light')
-  // console.log(`@93 `,{status_lights})
-
-  tp.set_status_light = (x) =>{
-    // console.log(`@311 `, {status_lights});
-    status_lights.forEach(it=>{
-      // console.log(`@312 `, it.attributes.color, {it});
-      if (it.id == x) {
-        it.style['background-color'] = it.attributes.color.value;
-      } else {
-        it.style['background-color'] = 'darkgray'
-      }
-//      console.log(it.style);
-    })
-  }
-
-  tp.set_status_light('status-busy')
-
-  // console.log(`@197 tp.s3fpath:${tp.s3fpath}`)
-
-
-return;
-get_s3Object(tp)
-
-  console.log(`@40 done with Template.edit_article.onRendered [${new Date().getTime() - etime_} ms]`)
-  return;
-
-// ==========================================================================
-  const conn = Meteor.connection;
-  console.log({conn})
-  ;(verbose>0) &&
-    console.log(`@39: onRendered - Meteor.connection._lastSessionId: `,Meteor.connection._lastSessionId);
-  ;(verbose>0) &&
-    console.log(`[${new Date().getTime()-etime}] Template.edit_article.onRendered.data:`,tp.data)
-  //const ai = FlowRouter.getParam('ai');
-
-//  const xid = tp.data.xid();
-  const _host = FlowRouter.getQueryParam('h');
-  const host = _host; // || tp.data.host(); // from connection; WRONG
-  const pathname = FlowRouter.getQueryParam('p');
-  let md_fn;
-
-  ;(verbose>0) &&
-    console.log(`@51 host:${host} path:${pathname}`);
-
-/*
-  if (!host || !pathname) {
-    console.log(`ALERT host or path are missing`)
-    return;
-  } */
-
-  article_meta.set({host,pathname,xid})
-
-
-//  console.log(`data:`,tp.data);
-//  console.log(`data.article_id:`,tp.data.ai());
-//  console.log(`data.url:`,tp.data.url());
-
-
-
-  //tp.cm.setValue(tp.text.get());
-
-
-  //  tp.text = new ReactiveVar()
-  /*
-  if (!host || !pathname) {
-    console.log(`@72 missing-url -stop`)
-    console.log(`host:${host}`)
-    console.log(`pathname:${pathname}`)
-    console.log(`xid:${xid}`)
-    return;
-  }*/
-
-
-
-    Meteor.call('get-e3data',{host, pathname, xid, x:'hello'},(err,data)=>{
-      ;(verbose >0) && console.log(`@81 Meteor.call('get-e3data')`)
-      /*
-          Keep it here, to avoid having a Tracker.autorun !
-      */
-      if (err) {
-        console.log('get-e3data fails:',{err})
-        console.log({data})
-        return;
-        throw err; // display error.
-      }
-      console.log(`@92: [${new Date().getTime()-etime}] Meteor.call => get-e3data:`,{data}) // here is the raw-file content
-      const {data:article, error} = data;
-      if (error) {
-        state.set({error:'article-not-found', text:error})
-        console.log(`@101: FATAL error:`, state.get())
-        return;
-      }
-
-      // install_codeMirror(tp);
-
-
-
-      /************************************************************************
-      What to expect here:
-
-          something for codeMirror: YAMl/metadata [+ MD-code]
-
-      for museum: only metadata.
-
-      When editora read from database, we expect pure text from safeLoad()
-
-      *************************************************************************/
-
-
-
-      if (false) {
-        data.data = validate_and_enforce_xid(data.data, xid)
-        console.log(`@95: `,data.data)
-        assert(data.md_path)
-      }
-
-      md_fn = data.md_path;
-
-  //    tp.text.set(data.text)
-      Session.set('edit-host',host)
-      Session.set('edit-pathname',pathname)
-      Session.set('edit-xid',xid)
-      assert(cm)
-      cm.setValue(data.data);
-return;
-      cm.setValue(`---
-sku: ${ai}
-format: raw-html
----
-${html}
-      `);
-    })
-
-    /*
-    Meteor.call('get-e3data',{fn:'web_page2',ai:'22222',x:'hello22222'},(err,data)=>{
-      if (err) throw err; // display error.
-      console.log(`[${new Date().getTime()-etime}] Meteor.call => get-e3data:`,{data}) // here is the raw-file content
-    })*/
-
-    assert(cm)
-
-  cm.on("change", (cm, change)=>{ // transform MD -> Article -> html (preview)
-    console.log(`codeMirror change:`,{change});
-    /*
-    var Article = Meteor.publibase_article;
-    const self = this;
-//    this.ccount.set(this.ccount.get()+1);
-    Session.set('cm-hitCount',1);
-    // update a reactive variable.
-    let s = cm.getValue();
-
-    // here we should extract data to go in headline, or abstract
-    Editora.md_code.set(s);
-//    const p = Meteor.publibase_dataset.cc.markup_render_preview(s);
-//    Meteor.publibase.article_html_preview.set(p);
-  */
-    return false; // ??
-  });
-
-  // ---------------------------------------------------------------------------
-
-
-  // ---------------------------------------------------------------------------
-
-  function install_codeMirror(tp) {
-    const cm_TextArea = tp.find('#cm_TextArea'); //document.getElementById('myText');
-
-    console.log({cm_TextArea})
-    console.log(`Template.edit_article.onRendered.data:`,tp.data)
-    // configure codeMirror for this app-key
-    const cm = CodeMirror.fromTextArea(cm_TextArea, {
-  //      mode: "javascript",
-  //      mode: "markdown",
-        mode: "text/x-yaml",
-        lineNumbers: true,
-        viewportMargin:10,
-        cursorScrollMargin: 5,
-        lineWrapping: true,
-        matchBrackets: true,
-  //      keyMap:'vim',
-        keyMap:'sublime',
-        viewportMargin:100, // ???
-//        viewportMargin: Infinity, // ???
-        extraKeys: {
-//          "Ctrl-S": commit_article.bind(tp),
-
-          "Ctrl-S": function(instance) {
-            console.log('SAVE',{instance});
-            publish_article(tp); // should be commit without publish.
-          }
-  //        "Ctrl-Right": next_article,
-  //        "Ctrl-Left": prev_article
-        }
-    });
-    //  cm.save()
-    $(".CodeMirror").css('font-size',"10pt");
-    $(".CodeMirror").css('line-height',"24px");
-    //cm.setSize('100%', '100%');
-    cm.on('keydown',(instance,e)=>{
-      Session.set('edit-status','editing')
-      //console.log(`@324`,{e})
-      tp.set_status_light ('status-orange')
-      Session.set('edit-message','')
-
-    })
-    // json to yaml.
-    return cm;
-  } // install_codeMirror
-
-}) // on Rendered
 
 // ---------------------------------------------------------------------------
 
@@ -408,55 +168,6 @@ Template.edit_article_not_found.events({
 
 
 
-
-FlowRouter.route('/edit', { name: 'edit-article',
-  triggerEnter: [
-    function(context, redirect) {
-      const web_page = Session.get('web-page');
-      console.log(`triggerEnter web_page:`,Session.get('web-page'))
-//      if (!web_page) redirect('/')
-    }
-  ],
-  action: function(params, queryParams){
-    console.log('Router::action for: ', FlowRouter.getRouteName());
-    console.log(' --- params:',params);
-    document.title = "editora-v2";
-    console.log(`@210: host:`,location.host)
-    const {host} = location;
-//    const web_page = Session.get('web-page');
-    /*
-    if (!web_page) {
-      console.log(`no web-page defined. switching to root.`)
-      FlowRouter.go('/')
-      return;
-    } */
-//    Session.set('article-id',params.article_id)
-//    console.log(`html-page already set:`,Session.get('web-page'))
-    console.log(`render data:`,Object.assign(params,queryParams))
-//    BlazeLayout.render('edit_article',Object.assign(params,queryParams,{xid:queryParams.xid}));
-
-    const {s3} = queryParams; // full Key for md-file
-    if (!s3) throw 'INVALID PARAM'
-    //console.log(`@225: `,{host},{s3})
-    let {s3:s3fn, flags} = capture_options(s3);
-    console.log(`@553 `,{flags},{s3fn})
-    const {Bucket,subsite,xid,fn} = utils.extract_xid2('s3://'+s3fn)
-
-    const s3_url = 's3://' + path.join(Bucket,subsite, xid || '' , fn||'index.md')
-
-    /*
-    const fn_ = (fn)? s3fn : path.join(s3fn, 'index.md')
-    const s3dir = new utils.s3parser(s3fn).remove('index.md');
-    const s3fpath = new utils.s3parser(s3fn).remove('index.md').add('index.md')
-    assert(s3, 'missing s3path');
-    */
-
-//    Session.set('s3dir',s3dir) // this is the requested file
-
-    Session.set('s3-url', s3_url) // this is the requested object-file
-    BlazeLayout.render('edit_article', {s3_url, flags});
-  }
-});
 
 
 function capture_options(url) {
@@ -585,3 +296,92 @@ function get_s3Object(tp) {
   })
 
 }
+
+// --------------------------------------------------------------------------
+
+
+FlowRouter.route('/edit', { name: 'edit-article',
+  triggerEnter: [
+    function(context, redirect) {
+      const web_page = Session.get('web-page');
+      console.log(`triggerEnter web_page:`,Session.get('web-page'))
+//      if (!web_page) redirect('/')
+    }
+  ],
+  action: function(params, queryParams){
+    console.log('Router::action for: ', FlowRouter.getRouteName());
+    console.log(' --- params:',params);
+    document.title = "editora-v2";
+    console.log(`@210: host:`,location.host)
+    const {host} = location;
+//    const web_page = Session.get('web-page');
+    /*
+    if (!web_page) {
+      console.log(`no web-page defined. switching to root.`)
+      FlowRouter.go('/')
+      return;
+    } */
+//    Session.set('article-id',params.article_id)
+//    console.log(`html-page already set:`,Session.get('web-page'))
+    console.log(`render data:`,Object.assign(params,queryParams))
+//    BlazeLayout.render('edit_article',Object.assign(params,queryParams,{xid:queryParams.xid}));
+
+    const {s3, workspace, w3} = queryParams; // full Key for md-file
+
+    let s3_url, flags;
+
+    if (s3) {
+      // WE EXPECT A MD-file.
+      // DO NOT SHOW RIGHT PANEL
+      // if (index.md) is missing add-it.
+      // in the edit-panel, if <s3-url>.index.md does not exists => we will open the directory.
+
+      let {s3:s3fn, flags:flags_} = capture_options(s3);
+      console.log(`@553 `,{flags},{s3fn})
+
+      /*
+        the only case we add 'index.md'
+      */
+
+      const {Bucket,Key,subsite,xid,base,ext} = parse_s3filename(s3fn)
+      if (!ext) {
+        // assume the user forgott (index.md)
+        s3_url = path.join(Bucket,Key,'index.md');
+        //const w3 = path.join(Bucket,Key)
+        Session.set('s3-url', s3_url);
+        BlazeLayout.render('edit_article', {flags, s3_url, flags});
+        return;
+      } else {
+        s3_url = path.join(Bucket, Key)
+//        Session.set('workspace', path.join(Bucket,subsite,xid));
+      }
+      flags = flags_;
+      Session.set('s3-url', s3_url) // this is the requested object-file
+//      Session.set('showing-right-panel',false);
+      } // s3
+
+    else if (workspace || w3) {
+      const ws = workspace || w3;
+      Session.set('workspace', 's3://'+ws)
+      Session.set('s3-url', null) // will close left-panel
+    } else {
+      console.log(`fatal @581`)
+      //throw new Error('@581 - expecting queryParams s3 or workspace.')
+      FlowRouter.go('welcome')
+      return;
+    }
+
+    /*
+    const password = localStorage.getItem('password');
+    if (!password) {
+//      BlazeLayout.render('welcome');
+      FlowRouter.go('/welcome')
+      return;
+    } */
+
+    /* because at least one is undefined - we pass queryParams in Session */
+
+    console.log(`@595 leaving router (edit-article) :`,queryParams)
+    BlazeLayout.render('edit_article', {flags, s3_url, flags});
+  }
+});

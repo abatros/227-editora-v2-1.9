@@ -1,0 +1,45 @@
+<head>
+  <style media="screen">
+    div.fragments em {
+      color:#8e4900;font-weight:bold;
+    }
+  </style>
+</head>
+
+<template name="right_panel_deep_search">
+<div class="hbox qc" style="padding:5px 0px;">
+  <form class="js-lookup">
+  <input type="text" name="query" style="height:16pt;">
+  <button type="submit"
+  style="padding-left:10px;font-size:14pt;"
+  ><i class="fa fa-arrow-right"></i></button>
+  <input type="checkbox" name="preview-or-edit"> preview
+  </form>
+</div>
+
+<vbox style="
+    overflow-y:auto;
+    flex-grow:1;
+    border: 3px solid orange;
+    font-family:monospace; font-size:9pt; line-height:12pt; padding:5px;
+    ">
+
+  {{#each items}}
+  <form class="js-item" name="{{this.xid}}" data="{{@index}}">
+  <hbox class="qj directory-item" >
+    <button class="js-edit sammy-nowrap-2"
+    style="flex-grow:1; text-align:left; color:#8e4900;
+    font-weight:bold; font-size:11pt;"
+    type="submit" name="preview" title="{{this.xid}}" data="{{@index}}"
+    >{{this.data.h1}}</button>
+  </hbox>
+  </form>
+  <div class="fragments"
+  style="padding: 3px 0 5px 0; border-bottom: 1px solid white; margin-bottom:10px;
+    font-family: 'roboto condensed'; font-size: 11pt; font-weight:400; line-height:16pt;">
+    {{{this.fragments}}}
+  </div>
+  {{/each}}
+</vbox>
+
+</template>

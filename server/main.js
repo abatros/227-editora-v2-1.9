@@ -3,14 +3,20 @@ import { Meteor } from 'meteor/meteor';
 const fs = require('fs-extra');
 const path = require('path')
 const assert = require('assert')
-const s3client = require('./lib/aws-s3.js')();
+const s3 = require('./lib/aws-s3.js')();
 const Massive = require('massive');
 const monitor = require('pg-monitor');
 const {parse_s3filename} = require('/shared/utils.js')
+const {postgres_connect} = require('/server/lib/postgres-connect.js')
+require ('./methods/deep-search.js')
+require ('./methods/refresh-web-page.js')
+require ('./methods.js')
+import {fix_folder_v2} from './lib/utils.js'
 
-let db =null;
+let db = null; //  must be in async await postgres_connect();
 
-assert(s3client.readdir, 'undefined s3.readdir')
+
+assert(s3.readdir, 'undefined s3.readdir')
 
 require('./lib/new-article.js')
 //require('./lib/get-s3object-method.js')
@@ -19,59 +25,61 @@ const utils = require('./lib/utils.js')
 const util2 = require('/shared/utils.js')
 
 
-Meteor.startup(() => {
+Meteor.startup(async () => {
   // code to run on server at startup
   // console.log(`@11: `, www_root.init('/www'))
   require('./get-e3md.js').init('/www');
 //  console.log(`@12 Meteor.startup: `,{s3})
-  console.log(`@13 Meteor.startup - ping ->`,s3client.ping())
+  console.log(`@13 Meteor.startup - ping ->`,s3.ping())
+  db = await postgres_connect();
+  // await fix_folder('s3://abatros/projects')
+  await fix_folder_v2('s3://abatros/projects')
+
 });
 
 Meteor.onConnection((x)=>{
-  console.log(`@11: onConnection `,x)
-  console.log(`@11: onConnection.httpHeaders.host `,x.httpHeaders.host)
+  console.log(`@11: Meteor.onConnection x-real-ip:"${x.httpHeaders['x-real-ip']}" ${new Date().toLocaleString()}
+  user-agent: ${x.httpHeaders['user-agent']}
+  accept-language: ${x.httpHeaders['accept-language']}
+  `)
 })
 
-/*
-Meteor.methods({
-  'get-e3data': async (cmd) =>{
-    const {get_e3md} = require('./get-e3md.js')
-    console.log(`@15: >> get-e3md:`,{cmd})
-    return await get_e3md(cmd);
-  }
-});*/
 
+async function getObject_Obsolete_moved_to_aws_s3(p1) {
+
+  if (typeof p1 === 'string') {p1 = parse_s3filename(p1);}
+
+  const {Bucket, Key, VersionId} = p1;
+  if (! Bucket) {
+    console.log(`@46 `,{p1})
+    throw '@46 Missing Bucket';
+  }
+  if (! Key) throw '@47 Missing Key'
+
+  const retv = await s3.getObject(p1); //.Body.toString('uft8')
+  if (!retv || retv.error || !retv.Body) {
+    console.log(`@57 file-not-found : `,{Bucket},{Key})
+    return Object.assign(p1,{error:'file-not-found'});
+  }
+
+  const {ETag, Body, LastModified} = retv;
+  return {
+    ETag, VersionId,
+    LastModified, // to flag non-live documents
+    data: Body.toString('utf8'),
+  }
+}
 
 Meteor.methods({
   'get-s3object': async (cmd) =>{
     try {
-      if (typeof cmd === 'string') {
-        cmd = parse_s3filename(cmd);
-      }
-
-      console.log(`@50 `,{cmd})
-      const {Bucket, Key, VersionId} = cmd;
-      if (! Bucket) throw 'Missing Bucket'
-      if (! Key) throw 'Missing Key'
-      const p1 = {Bucket, Key, VersionId};
-      /*
-      const retvv = s3clientparse_s3filename(s3_url);
-      console.log({retvv})
-      assert(Bucket)
-      assert(Key)*/
-
-      const retv = await s3client.getObject(p1); //.Body.toString('uft8')
-      if (!retv || retv.error || !retv.Body) {
-        console.log(`file-not-found : `,{Bucket},{Key})
-        return {error:'file-not-found'}
-      }
-
-      const {ETag, Body, LastModified} = retv;
-      return {
-        ETag, VersionId,
-        LastModified, // to flag non-live documents
-        data: Body.toString('utf8'),
-      }
+      console.log(`@73 get-s3object cmd:`,cmd)
+      const retv1 = await s3.getObject(cmd);
+      console.log(`@74 get-s3object retv1:`, retv1)
+      const {error, Bucket, Key, VersionId, data, etime, LastModified} = retv1;
+      const retv2 = {Bucket, Key, error, VersionId, data, etime, LastModified};
+      console.log(`@77 get-s3object retv2:`, retv2)
+      return retv2;
     }
     catch(err) {
       console.trace(`@61 method::get-s3object`)
@@ -90,7 +98,8 @@ Meteor.methods({
       // const {meta, md, err} = utils.extract_metadata(data);
 
       //console.log(`@60 `,{cmd})
-      utils.putObject({s3_url, data}); // this is able to set the mime-type
+      s3.putObject({s3_url, data})
+//      utils.putObject({s3_url, data}); // this is able to set the mime-type
     }
     catch(err) {
       console.log(`@106 Method:commit-s3data `,{err})
@@ -197,19 +206,24 @@ function extract_xid(s3fn) {
 
 Meteor.methods({
   'publish-s3data': async (cmd) =>{
-    const verbose =1;
+    const verbose =2;
 
-    ;(verbose>0) && console.log(`@194: publish-s3data cmd:`,cmd)
+    ;(verbose>0) && console.log(`@194 Meteor.method publish-s3data cmd:`,cmd)
     try {
-      const {s3_url, data, update} = cmd;
+      const {s3_url, update} = cmd;
+      let {data} = cmd; // if no data we must fetch
+
       if (!s3_url) throw new Meteor.Error('sys-error','','@196 publish-s3data : missing s3_url');
 
-      const {xid, fn} = util2.extract_xid2(s3_url);
+//      const {xid, fn} = util2.extract_xid2(s3_url);
+      const s3_ = parse_s3filename(s3_url)
+      ;(verbose>0) && console.log(`@214 `, s3_)
+      const {Bucket, Key, subsite, xid, base, ext} = s3_;
 
-      if (!xid) {
-        if(fn.endsWith('.md')) throw new Meteor.Error('sys-error','',`@203 sys-error`);
+      if (base != 'index.md') {
+//        if(fn.endsWith('.md')) throw new Meteor.Error('sys-error','',`@203 sys-error`);
         const retv = await utils.putObject({s3_url, data}); // MD-code
-        console.log(`@204 publish-s3data thinks it is not publishable.`)
+        ;(verbose>0) && console.log(`@204 publish-s3data thinks it is not publishable.`)
         return {
           warning: 'nothing-published',
           error: null,
@@ -218,8 +232,20 @@ Meteor.methods({
       }
 
 
+      if (data) {
+        const retv1 = await utils.putObject({s3_url, data}); // MD-code
+        ;(verbose>0) && console.log(`@224 putObject => `,{retv1})
+      } else {
+        // publish with no data => fetch from s3://
+        const {data:data_,error} = await getObject(s3_url)
+        if (error) return {error, s3_url}
+        data = data_;
+      }
+
+
       const {meta, md, err} = util2.extract_metadata(data);
-      ;(verbose>0) && console.log(`@214: `,{meta},{err})
+      ;(verbose>0) && console.log(`@214 md.length:${md && md.length} `,{meta},{err})
+
 
       /***********************
 
@@ -228,12 +254,11 @@ Meteor.methods({
 
       meta.xid = xid;
       ;(verbose>0) && console.log(`@222: `,{meta},{err})
-      const retv1 = await utils.putObject({s3_url, data}); // MD-code
-      ;(verbose>0) && console.log(`@224: `,{retv1})
+//      const retv1 = await utils.putObject({s3_url, data}); // MD-code
 
 
 //      const yaml_fn = new s3path(s3_url).parent().parent().add('.publish.yaml').value;
-      const {Bucket,subsite} = util2.extract_subsite(s3_url)
+//      const {Bucket,subsite} = util2.extract_subsite(s3_url)
       ;(verbose>0) && console.log(`@225: `,{Bucket},{subsite})
       const yaml_fn = path.join(Bucket,subsite,'.publish.yaml')
 
@@ -244,11 +269,11 @@ Meteor.methods({
 
       if (!publish_cfg) throw `Missing config file (.publish.yaml)`
 
-      ;(verbose>0) && console.log(`@63 `,{publish_cfg})
       const {template:template_fn} = publish_cfg;
 
       const custom = utils.setCustom(publish_cfg.format)
       if (!custom) throw `mk_html not-found for <${publish_cfg.format}>`
+
       const {mk_html,
   //      commit_ts_vector,
         scan_e3live_data,
@@ -262,11 +287,12 @@ Meteor.methods({
 //      assert(mk_h1_html, `Missing-hook mk_h1_html`)
 
       const {html} = await custom.mk_html({meta,md,s3_url, subsite,template_fn})
-      ;(verbose>0) && console.log(`@110 `,{html})
+      ;(verbose>1) && console.log(`@110 `,{html})
 
 
 //      const html_fn = new s3path(s3_url).parent().add('index.html').value;
       const html_fn = path.join(Bucket,subsite,xid,'index.html')
+      ;(verbose>0) && console.log(`@290 writing on <${html_fn}>`)
       utils.putObject({s3_url:html_fn, data:html}); // MD-code
 
       const {meta_tags, raw_text} = scan_e3live_data(html)
@@ -343,7 +369,7 @@ Meteor.methods({
 })
 
 
-function get_pg_env() {
+function get_pg_env_Obsolete() {
   const env1 = process.env.METEOR_SETTINGS && JSON.parse(process.env.METEOR_SETTINGS)
   if (env1) {
     // on the server
@@ -354,7 +380,7 @@ function get_pg_env() {
   return {PGUSER, PGPASSWORD}
 }
 
-
+/******************
 function postgres_connect() { // should go in utils.
   const {PGUSER:user, PGPASSWORD:password} =  get_pg_env();
   console.log(`@110 Massive startup w/passwd: <${password}>`);
@@ -369,12 +395,12 @@ function postgres_connect() { // should go in utils.
     monitor.attach(db.driverConfig);
     return db;
   })
-}
+} *****************/
 
 
 Meteor.methods({
   'get-s3Object-versions': async (s3_url)=>{
-      const data = await s3client.listObjectVersions(s3_url)
+      const data = await s3.listObjectVersions(s3_url)
 //      return data.Versions;
       return data.Versions.map(it =>{
         const {ETag, IsLatest, LastModified, Size, VersionId} = it;
@@ -383,27 +409,244 @@ Meteor.methods({
   }
 })
 
+// ---------------------------------------------------------------------------
+async function listObjects_nofix(sdir) {
+  const verbose =1;
+  const x = util2.parse_s3filename(sdir);
+  ;(verbose >0) && console.log(`@418 listObjects_nofix `,x)
+  const {Bucket, Key:Prefix} = x;
+//  const {dir:Prefix} = path.parse(Key);
+  const Delimiter= '/';
+
+  console.log(`@415 Bucket:<${Bucket}> Prefix:<${Prefix}> Delimiter:<${Delimiter}>`)
+  const retv = await s3.readdir_nofix({
+    Bucket,
+    Prefix: (Prefix)?Prefix+'/':'',  // a tester
+    Delimiter,
+  })
+  console.log(`@420 readdir_nofix =>`,{retv})
+  /*
+  const {Contents, CommonPrefixes, Prefix:Prefix2} = retv;
+  Contents.forEach(it=>{
+    console.log('Content:',it)
+  })
+  CommonPrefixes.forEach(it=>{
+    console.log('CommonPrefix:',it)
+  }) */
+
+  console.log(`@428 readdir_nofix =>`,{retv})
+  return retv;
+}
+
+Meteor.methods({
+  'list-s3objects': async (p1)=>{
+    if(typeof p1 == 'string') {p1 = parse_s3filename(p1);}
+
+    const {Bucket, Key, Prefix=Key, Delimiter} = p1;
+    assert(Bucket)
+    assert(Prefix)
+
+    const retv = await s3.readdir_nofix({
+      Bucket,
+      Prefix,
+      Delimiter
+    })
+
+    console.log(`@449 list-s3objects =>`,{retv})
+    const {Contents, CommonPrefixes, Prefix:Prefix2} = retv;
+    Contents.forEach(it=>{
+      console.log('Content:',it)
+    })
+    CommonPrefixes.forEach(it=>{
+      console.log('CommonPrefix:',it)
+    })
+    return retv;
+  }
+})
+
+// --------------------------------------------------------------------------
+
+/*
+      include Objects without extension
+      include prefix
+*/
+
+Meteor.methods({
+  'list-md-files': async (p1)=>{
+    if(typeof p1 == 'string') {
+      if (!p1.startsWith('s3://')) {
+//        assert(!p1.startsWith('s3:/')) // !!!!
+        if(p1.startsWith('s3:/')) {
+          return {
+            error:'syntax-error',
+            s3fn: p1
+          }
+        }
+      }
+      p1 = parse_s3filename(p1);
+    }
+
+
+    // accept (Key == null)
+    console.log(`@479 Entering <list-md-files> p1:`,p1)
+
+//    const {Bucket, Key, Prefix=Key, Delimiter = '/index.md'} = p1;
+    const {Bucket, Key,
+      Prefix= (Key)?Key+'/':'',
+      Delimiter = '/'} = p1;
+    assert(Bucket)
+//    assert(Prefix)
+
+    const retv1 = await s3.readdir_nofix({
+      Bucket,
+      Prefix,
+      Delimiter
+    })
+
+    console.log(`@449 list-s3objects =>`,{retv1})
+    const {Contents, CommonPrefixes, Prefix: _Prefix} = retv1;
+
+    const h={};
+    const _list =[];
+    const plen2 = _Prefix.length;
+
+    Contents.forEach(it =>{
+      const {Key} = it;
+      // filter objects with extensions.
+      const {ext} = path.parse(Key);
+      if (!ext) {
+        // remove Prefix
+        assert(Key.startsWith(_Prefix))
+        /*
+            Objects here are md-files => add ('/')
+        */
+        const Key_ = Key.substring(plen2);
+        _list.push({Key: Key_}) // only Key....
+        h[Key_] = h[Key_] || {};
+        Object.assign(h[Key_], {o:true})
+      }
+    })
+    CommonPrefixes.forEach(it =>{
+      const {Prefix} = it;
+      // remove Prefix
+      assert(Prefix.startsWith(_Prefix))
+      let Prefix_ = Prefix.substring(plen2).slice(0,-1);
+      _list.push({Prefix:Prefix_})
+      h[Prefix_] = h[Prefix_] || {};
+      Object.assign(h[Prefix_], {d:true})
+    })
+
+
+
+    const retv = {
+      Prefix:_Prefix,
+      list:_list,
+      error:null,
+      h: Object.entries(h)
+    }
+    return retv;
+
+
+    /***********************************
+    const plen = _prefix.length;
+    const list = CommonPrefixes.map(it => {
+      console.log(it)
+      const {dir,base} = path.parse(it.Prefix);
+//      const {base} = path.parse(dir);
+      // remove prefix.
+//      assert(dir.startsWith(_prefix))
+//      return {Key:dir.substring(plen)}
+      return {Key:base}
+    });
+
+    return {list, // [{Key,Prefix,name}]
+      error:null,
+      Prefix: _prefix,
+    };
+    ****************/
+  }
+})
+
 
 Meteor.methods({
   'subsite-directory': async (sdir)=>{
-    const verbose =0;
+    // FULL DIRECTORY
+
+    const verbose =1;
     try {
-      ;(verbose >0) &&console.log(`@360 subsite-directory `,{sdir})
-  //    util2.assert_type(sdir, 'string', '@375 Invalid Type')
-      const list_ = await s3client.readdir(sdir)
+      ;(verbose >0) &&console.log(`@529 Entering subsite-directory <${sdir}>`)
+
+      assert (typeof sdir == 'string')
+      if (!sdir.startsWith('s3://')) {
+        assert(!sdir.startsWith('s3:/')) // !!!!
+      }
+
+      const retv1 = await listObjects_nofix(sdir);
+      console.log(`@539 `,{retv1})
+      const {Contents, CommonPrefixes, Prefix:_Prefix} = retv1;
+
+      /*
+          client expect:
+            list = [{}]
+      */
+
+      const _list =[];
+      const plen2 = _Prefix.length;
+
+      Contents.forEach(it =>{
+        const {Key} = it;
+        // remove Prefix
+        assert(Key.startsWith(_Prefix))
+        _list.push({Key: Key.substring(plen2)}) // only Key....
+      })
+      CommonPrefixes.forEach(it =>{
+        const {Prefix} = it;
+        // remove Prefix
+        assert(Prefix.startsWith(_Prefix))
+        _list.push({Prefix:Prefix.substring(plen2)})
+      })
+
+      const retv = {
+        Prefix:_Prefix,
+        list:_list,
+        error:null
+      }
+      return retv;
+
+      throw new Meteor.Error('workingbreak@540');
+// ==========================
+
+      const {base, ext} = util2.parse_s3filename(sdir);
+      if (ext) {
+        return await listObjects_nofix('s3://blueink/ya14');
+//        return await listObjects_nofix(sdir);
+      }
+
+      const {list:list_, Prefix} = await s3.readdir(sdir)
       if (!list_) {
           return {error:'empty-list', list:null}
       }
-      ;(verbose >0) &&console.log(`@367 subsite-directory `,{list_})
+      ;(verbose >0) &&console.log(`@367 subsite-directory prefix:(${Prefix})`,{list_})
 
       const {Bucket,subsite} = util2.extract_xid2(sdir)
 
-      const list = list_.map(({Prefix}) =>{
+      const plen = Prefix.length;
+      const list = list_.map((it) =>{
         // { Prefix: 'projects/227-blueink-db/' }
-        const {dir,name} =  path.parse(Prefix)
-        return name;
+        const {Key:_key, ETag, LastModified, Prefix:_prefix} = it; // exclusive
+        if (_key) {
+          assert(_key.startsWith(Prefix))
+          const Key = _key.substring(plen)
+          return {Key,ETag, LastModified}
+        } else if (_prefix) {
+          assert(_prefix.startsWith(Prefix))
+          const _Prefix = _prefix.substring(plen)
+          return {Prefix:_Prefix}
+        }
       })
-      ;(verbose >0) &&console.log(`@366 subsite-directory ${list.length} rows.`)
+
+      ;(verbose >0) &&console.log(`@449 subsite-directory:`,{list})
+      ;(verbose >0) &&console.log(`@450 subsite-directory ${list.length} rows.`)
       return {
         prefix:subsite,
         list,
@@ -434,14 +677,14 @@ Meteor.methods({
       const {template:template_fn} = cfg;
       console.log(`@428 `,{template_fn})
 
-      const retv = await s3client.getObject(template_fn)
+      const retv = await s3.getObject(template_fn)
       console.log(`@429 `,{retv})
       const {Body, ETag, VersionId} = retv;
       if (!ETag) throw '@432 file-not-found'
 
 
-//      const retv2 = await s3client.getObject('s3://abatros/projects/mk-html.js')
-      const retv2 = await s3client.getObject('s3://blueink/ya14/mk-html.js')
+//      const retv2 = await s3.getObject('s3://abatros/projects/mk-html.js')
+      const retv2 = await s3.getObject('s3://blueink/ya14/mk-html.js')
       console.log(`@435 `,{retv2})
       if (!retv2.ETag) throw '@436 file-not-found'
 
@@ -467,13 +710,13 @@ Meteor.methods({
 
 Meteor.methods({
   'delete-object': async (p1)=>{
+    console.log(`@505 delete-object `,{p1})
     if (typeof p1 === 'string') {p1 = parse_s3filename(p1)}
-
     const {Bucket, Key, VersionId} = p1;
     p1 = {Bucket, Key, VersionId};
 
-    const data = await s3client.deleteObject(p1);
-    console.log(`@477 deleted version <${data.VersionId}>`)
-    return {VersionId: data.VersionId}
+    const data = await s3.deleteObject(p1);
+    console.log(`@477 deleted version <${data.VersionId}>`,{data})
+    return data; //{VersionId: data.VersionId}
   }
 })

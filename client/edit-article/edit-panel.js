@@ -7,6 +7,55 @@ const yaml = require('js-yaml')
 const {parse_s3filename} = require('/shared/utils.js')
 const TP = Template.edit_panel;
 
+// ---------------------------------------------------------------------------
+/*
+      Current document must stay in the cache.
+*/
+
+//const codeMirror_Value = new ReactiveVar();
+
+Tracker.autorun(function(){
+  let s3fn = Session.get('s3-url')
+  if (!s3fn) return;
+
+  const VersionId = Session.get('VersionId')
+  console.log(`>>> edit-panel Tracker.autorun: <${s3fn}> VersionId:[${VersionId}]`)
+//  get_s3Object(tp, s3fn, VersionId, force); // THIS WILL INSTALL DATA IN CODE MIRROR.
+  const {Bucket, Key, subsite, xid, base, ext} = parse_s3filename(s3fn);
+  if (!ext) {
+    console.error(`ALERT this is not a MD-file <${s3fn}> fixing...`)
+    s3fn = path.join(s3fn,'index.md')
+  }
+
+  Meteor.call('get-s3object',s3fn,(err, data)=>{
+    if (err) {
+      console.error(`@30 `,{err})
+      return;
+    }
+    if (!data) {
+      console.error(`@34 missing-data`); // bad
+      return;
+    }
+    if (data.error) {
+      console.error(`@38 get-s3object(${s3fn}) => `,data.error);
+      // try a directory.
+      Session.set('workspace',Session.get('s3-url')) // the original.
+      Session.set('showing-right-panel',true)
+      Session.set('showing-directory-panel',true)
+      Session.set('s3-url',null); // to close left-panel
+      // this will activate directory-panel
+      return;
+    }
+    console.log(`@37 data for codeMirror is ready.`,{data})
+    const {Bucket,Key,LastModified,etime, data:cm_Value} = data;
+//    codeMirror_Value.set(cm_Value)
+    Session.set('code-mirror-data',cm_Value)
+  })
+});
+
+
+
+// ---------------------------------------------------------------------------
 
 TP.onCreated(function() {
   const tp = this;
@@ -24,13 +73,11 @@ TP.onRendered(function() {
   const force = (fpath.endsWith('--force'));
 
   tp.autorun(function(){
-    const tp = this;
-    const s3fn = Session.get('s3-url')
-    const VersionId = Session.get('VersionId')
-    tp.s3_url = s3fn;
-    console.log(`@19 autorun: <${s3fn}> VersionId:[${VersionId}]`,{tp})
-    get_s3Object(tp, s3fn, VersionId, force); // THIS WILL INSTALL DATA IN CODE MIRROR.
-  }.bind(tp)); // bind to a template - if not it's a View
+    const cm_Value = Session.get('code-mirror-data');
+    if (cm_Value) {
+      tp.cm.setValue(cm_Value)
+    }
+  })
 
   //console.log(`15 `,{cm_TextArea})
   console.log(`@14 edit_panel.onRendered -done- [${new Date().getTime() - tp.etime_} ms]`)
@@ -57,14 +104,40 @@ TP.onRendered(function() {
 TP.helpers({
   status_message() {
     return Template.instance().status_message.get();
-  },
+  }
 })
+
+function s3fn_to_workspace(s3fn) {
+  const {Bucket, Key, subsite, xid, base, ext} =  parse_s3filename(s3fn);
+  console.log(`@112 `,Bucket, Key, subsite, xid, base, ext)
+  if (ext && base && (base == 'index.md')) {
+    const {dir} = path.parse(Key); // move-up 1 step to remove (index.md)
+    const {dir:dir2} = path.parse(dir); // move-up 1 step to remove (index.md)
+    const s3dir = path.join(Bucket,dir2);
+//    console.log(`@303 set workspace:<${s3dir}>`)
+    return s3dir;
+  }
+
+
+  throw `@122 s3fn_to_workspace(${s3fn})`;
+  return s3fn
+}
 
 
 TP.events({
   'click .js-toggle-right-panel': (e, tp)=>{
       const q = Session.get('showing-right-panel')
       Session.set('showing-right-panel', !q)
+      if (!q) {
+        // right panel was closed.
+        // we are editing a file
+        // must have an extension
+        // or (isObject)
+        const s3fn = Session.get('s3-url')
+        Session.set('workspace', s3fn_to_workspace(s3fn))
+        Session.set('showing-right-panel', true);
+      }
+      Session.set('showing-directory-panel', true); // => create panel...
   },
   'click .js-update': (e,tp)=>{
     e.preventDefault(); // to avoid tailing #
@@ -94,7 +167,7 @@ function install_codeMirror(tp) {
   const cm_TextArea = tp.find('#cm_TextArea'); //document.getElementById('myText');
 
   console.log({cm_TextArea})
-  console.log(`Template.edit_article.onRendered.data:`,tp.data)
+  console.log(`Template.edit_panel.onRendered.data:`,tp.data)
   // configure codeMirror for this app-key
   const cm = CodeMirror.fromTextArea(cm_TextArea, {
 //      mode: "javascript",
@@ -156,8 +229,10 @@ function get_s3Object(tp, s3_url, VersionId, force) {
   const etime_ = new Date().getTime();
   assert(tp)
 
-  s3_url = s3fix(s3_url)
-  const {Bucket, Key} = parse_s3filename(s3_url);
+  //s3_url = s3fix(s3_url)
+  const {Bucket, Key, subsite, xid, base, ext} = parse_s3filename(s3_url);
+
+  console.log(`@162 `,{Bucket}, {Key}, {subsite}, {xid}, {base}, {ext})
   const p1 = {Bucket, Key, VersionId};
   /*
     tp is used to update UI : reactive var mostly error and status.
@@ -169,7 +244,7 @@ function get_s3Object(tp, s3_url, VersionId, force) {
         Keep it here, to avoid having a Tracker.autorun !
     */
     if (err) {
-      console.log('get-e3data fails:',{err})
+      console.log('get-s3object fails:',{err})
       //Session.set('edit-status','error')
       tp.set_status_light('status-red')
       tp.status_message.set(`${err.error} - ${err.details}`);
@@ -178,9 +253,16 @@ function get_s3Object(tp, s3_url, VersionId, force) {
 
     console.log(`@112 `,{data})
     if (data.error) {
-      console.log(`@206 `, data.error)
+      console.log(`@206 <${s3_url}>`, data.error)
       tp.set_status_light('status-red')
-      tp.status_message.set(`file-not-found`);
+//      tp.status_message.set(`file-not-found`);
+      tp.status_message.set(data.error);
+
+      if (!force) {
+        try_open_directory(tp, s3_url);
+        return;
+      }
+
 
       if (force) {
         Session.set('edit-message','force creating file please wait...')
@@ -284,7 +366,26 @@ function get_s3Object(tp, s3_url, VersionId, force) {
 
 // -------------------------------------------------------------------------
 
+async function try_open_directory(tp, s3_url) {
+  console.log(`@297 try_open_directory(${s3_url})`)
+  const {Bucket, Key, subsite, xid, base, ext} =  parse_s3filename(s3_url);
+  console.log(`@298 `,Bucket, Key, subsite, xid, base, ext)
+  if (ext) {
+    const {dir} = path.parse(Key); // move-up 1 step
+    const s3dir = path.join(Bucket,dir);
+    console.log(`@303 set workspace:<${s3dir}>`)
+    Session.set('showing-right-panel', true);
+    Session.set('showing-directory-panel',true)
+    Session.set('workspace',s3dir)
+  }
+}
+
+
+
+// -------------------------------------------------------------------------
+
 function publish_article(tp, s3_url) {
+  const verbose =0;
   tp.set_status_light('status-busy')
 
   s3_url = s3_url || tp.s3_url;

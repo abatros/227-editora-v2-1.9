@@ -1,4 +1,8 @@
 import assert from 'assert';
+import {customAlphabet, customRandom} from 'nanoid';
+// const nanoid = customRandom('1234567890',4);
+import sha1 from 'sha1';
+
 import './right-panel-info.html'
 import {parse_s3filename} from '/shared/utils.js'
 // cache
@@ -6,6 +10,12 @@ import {parse_s3filename} from '/shared/utils.js'
 
 const TP = Template.right_panel_info;
 const versions = new ReactiveArray();
+
+function hashCode(str) {
+  return str.split('').reduce((prevHash, currVal) =>
+    (((prevHash << 5) - prevHash) + currVal.charCodeAt(0))|0, 0);
+}
+
 
 TP.onCreated(function() {
   const tp = this;
@@ -34,7 +44,10 @@ TP.helpers({
     const retv = versions && versions.list(); // reactive
     console.log(`@29 `,retv)
     const retv2 = retv.map(it=> {
-      return Object.assign(it, {lastModified:it.LastModified.toLocaleString()})
+      return Object.assign(it, {
+        lastModified:it.LastModified.toLocaleString(),
+        checksum: (hashCode(it.VersionId)%10000),
+      })
     });
     return retv2;
   }

@@ -1,0 +1,71 @@
+<head>
+  <style media="screen">
+    div#welcome {
+      font-size:12pt;
+    }
+    div#welcome button {
+      font-size:12pt;
+      border: 1px solid blue;
+      padding:3px 10px;
+      cursor:pointer;
+    }
+  </style>
+</head>
+
+
+<template name="welcome">
+<div id="welcome" class="hbox-qc"
+  style="width:100%; height:100%;
+  _border: 1px solid green;
+  ">
+
+  <vbox style="
+    border:1px dashed lightblue;
+    min-width:600px; max-width:1000px; height:100%;
+    flex-grow:1; padding:10px;
+    background-color: lightgray;
+    align-items:center;
+    ">
+
+    <div class="h1" style="margin:60px 0 20px 0;font-size:38pt;
+    font-family:'IM Fell DW Pica'">
+       Welcome to Editora/s3
+    </div>
+
+
+    {{#if session 'userId'}}
+
+    <div class="vbox"
+    style="margin:100px 0 0 0; height:400px; justify-content:space-evenly;
+    padding:10px 100px 100px 100px;
+    background-color: yellow;
+    align-items:center;
+    ">
+    <h3>Enter a workspace</h3>
+    {{#each ws in session 'workspaces'}}
+      <button type="button" name="{{ws}}" class="js-select-workspace">{{ws}}</button>
+    {{/each}}
+    </div>
+
+    {{else}}
+    <p style="line-height:30px; height:100px; border:0px dashed orange; margin-top:50px;">{{{err_message.get}}}</p>
+    <form class="js-userId" name="form1">
+      <div class="vbox"
+      style="margin:0px 0 0 0; height:400px; justify-content:space-evenly;
+      padding:10px 100px 100px 100px;
+      background-color: yellow;
+      align-items:center;
+      ">
+        Please enter your userId here:
+        <input type="text" name="userId" style="width:200px;font-size: 18pt;padding:5px 10px;">
+        <button type="submit" >Submit</button>
+        <!--
+        <button type="button" name="button2" style="font-size: 12pt;">or continue in demo mode</button>
+        -->
+      </div>
+    </form>
+    {{/if}}
+  </vbox>
+
+</div>
+</template>

@@ -5,8 +5,29 @@
   align-items: flex-start;
   ">
 
-  <div class="vbox">
-    this is admin panel.
+  <div class="vbox" style="min-width:800px; width:80%;">
+    - this is admin panel -
+    <br><br>
+    <form class="js-rebuild">
+      rebuild html for &rightarrow;
+      <code>s3://</code><input type="text" name="s3dir" style="font-family:monospace; line-height:16pt; width:300px;">
+      <button type="submit" name="rebuild-html" style="cursor:pointer;">[ rebuild-html ]</button>
+      <button type="submit" name="publish-index" style="cursor:pointer;">[ publish-index ]</button>
+    </form>
+    <div style="text-align:left; border:1px solid red; font-family:monospace; padding:10px;">
+      {{#each s3dir}}
+      <div class="hbox-qj">
+        <span>
+        <input type="checkbox" name="{{this.xid}}" value="{{this.checked}}" checked="{{this.checked}}">
+        &emsp;
+        {{this.xid}}
+        </span>
+        <span>
+          {{this.status}}
+        </span>
+      </div>
+      {{/each}}
+    </div>
   </div>
 
 

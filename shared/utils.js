@@ -5,87 +5,99 @@ const path = require('path')
 // ---------------------------------------------------------------------------
 
 function parse_s3filename(s3fn) {
+  const verbose =0;
+
   // remove protocol if present.
   if (s3fn.startsWith('s3://')) s3fn = s3fn.substring(5);
 
-  if (s3fn.endsWith('.md')) {
-    // ex: blueink/ya14/1202-Y2K3/index.md
-    const {dir:dir1, base} = path.parse(s3fn); // dir1: blueink/ya14/1202-Y2K3
-    const {dir:dir2, base:xid} = path.parse(dir1);  // xid: 1202-Y2K3 - dir2: blueink/ya14
-    const v = dir2.split('/');
-    const Bucket = v[0];
-    const subsite = v.slice(1).join('/');
-    return {
-      Bucket,
-      Key: path.join(subsite,xid,base),
-      subsite, xid, base
-    }
-  }
+  ;(verbose >0) && console.log(`@13 >>>> `,{s3fn})
 
-  // here non-publishable file => just extract Bucket/Key
-  const v = s3fn.split('/');
-  const {base} = path.parse(s3fn)
-  return {
-    Bucket: v[0],
-    Key: v.slice(1).join('/'),
-    base
+  const _v = s3fn.split('/');
+  const Bucket = _v.splice(0,1)[0];
+  const Key = _v.join('/');
+  console.log(`@16 _v.len:${_v.length} `,{_v})
+
+  const {dir, base, name, ext} = path.parse(Key);
+
+//  if (s3fn.endsWith('.md'))
+  if (ext)
+    {
+    // ex: blueink/ya14/1202-Y2K3/index.md
+//    const {dir:dir1, base} = path.parse(s3fn);
+    // here: dir: blueink/ya14/1202-Y2K3
+    // remove Bucket
+    _v.splice(-1,1); // remove base
+    let xid = _v.splice(-1,1)[0];
+    let subsite = _v.join('/')
+//    const {dir:dir2, base:xid} = path.parse(dir);
+    // xid: 1202-Y2K3 - dir2: blueink/ya14
+    // remove
+//    const subsite = dir2.split('/').slice(1).join('/');
+//    const {dir:} = path.parse(dir2)
+
+    if (!subsite) {
+      subsite = xid; xid=''; //swap
+    }
+
+    const retv = {
+      s3fn,
+      Bucket, Key,
+//      Key: path.join(subsite,xid,base),
+      subsite, xid, base, ext
+    }
+    ;(verbose >0) && console.log(`@30 `,{retv})
+    return retv;
+  } // ext
+
+
+  // here NO ext
+  // s3://blueink/ya14 = > dir:null base:'ya14' => subsite := base <>'ya14'
+  // s3://blueink/ya14/1202-Y3K2 = > dir:ya14 base:'1202-y3k2' => subsite := dir <>'ya14'
+
+
+  const retv2 = {
+    s3fn, Bucket, Key,
+    dir, base, name, ext,
+    subsite: null, // don't try to be smart!
+    xid: null,
   }
+  ;(verbose >0) && console.log(`@58 (directory) `,{retv2})
+  return retv2;
+
+
+  throw 'break@56'
+// ===========================================
+  // console.log(`@45 `,{Bucket},{Key},{dir},{base},{name},{ext})
+
+  // here NO EXT non-publishable file => just extract Bucket/Key
+  // HERE _v is Key
+
+  // remove tailing '/'
+
+  //console.log(`@53 last:<${_v[-1]}> _v.len:${_v.length} `,{_v})
+  if (! _v[_v.length-1]) {
+    //console.log(`@62 <${_v.join('|')}>`)
+    _v.splice(-1,1); // tricky....................
+    //console.log(`@63 <${_v.join('|')}>`)
+  }
+  let xid = _v.splice(-1,1)[0];
+  ;(verbose >0) && console.log(`@54 _v.len:${_v.length} `,{_v},{xid})
+  let subsite = _v.join('/')
+  ;(verbose >0) && console.log(`@55 _v.len:${_v.length} `,{_v},{subsite})
+
+  const retv = {
+    s3fn, Bucket, Key,
+    base: null,
+    subsite,
+    xid,
+    ext: null, // not '' ???
+  }
+  ;(verbose >0) && console.log(`@58 (directory) `,{retv})
+  return retv;
 
 } // parse_s3_filename
 
-(()=>{
-  const s3fn = 's3://blueink/ya14/1202-Y3k2/index.md';
-  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
-  assert((Bucket == 'blueink'))
-  assert((Key == 'ya14/1202-Y3k2/index.md'), `actual:${Key}`)
-  assert((subsite == 'ya14'), `actual:${subsite}`)
-  assert((xid == '1202-Y3k2'), `actual:${xid}`)
-  assert((base == 'index.md'), `actual:${base}`)
-})();
 
-
-(()=>{
-  const s3fn = 'blueink/ya14/1202-Y3k2/index.md';
-  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
-  assert((Bucket == 'blueink'))
-  assert((Key == 'ya14/1202-Y3k2/index.md'))
-  assert((subsite == 'ya14'))
-  assert((xid == '1202-Y3k2'))
-  assert((base == 'index.md'))
-})();
-
-
-(()=>{
-  const s3fn = 's3://blueink/ya14/tests/1202-Y3k2/index.md';
-  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
-  assert((Bucket == 'blueink'))
-  assert((Key == 'ya14/tests/1202-Y3k2/index.md'))
-  assert((subsite == 'ya14/tests'))
-  assert((xid == '1202-Y3k2'))
-  assert((base == 'index.md'))
-})();
-
-
-(()=>{
-  const s3fn = 'blueink/ya14/1202-Y3k2/index.html';
-  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
-  assert((Bucket == 'blueink'))
-  assert((Key == 'ya14/1202-Y3k2/index.html'))
-  assert((subsite == null))
-  assert((xid == null))
-  assert((base == 'index.html'), `actual ${base}`)
-})();
-
-
-(()=>{
-  const s3fn = 's3://blueink/ya14/1202-Y3k2/index.html';
-  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
-  assert((Bucket == 'blueink'))
-  assert((Key == 'ya14/1202-Y3k2/index.html'))
-  assert((subsite == null))
-  assert((xid == null))
-  assert((base == 'index.html'), `actual ${base}`)
-})();
 
 // ---------------------------------------------------------------------------
 
@@ -403,3 +415,73 @@ module.exports ={
   s3fix,
   parse_s3filename,
 }
+
+// -------------------------------------------------------------------------
+
+return;
+(()=>{
+  const s3fn = 's3://blueink/ya14/1202-Y3k2/index.md';
+  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
+  assert((Bucket == 'blueink'))
+  assert((Key == 'ya14/1202-Y3k2/index.md'), `actual:${Key}`)
+  assert((subsite == 'ya14'), `actual:${subsite}`)
+  assert((xid == '1202-Y3k2'), `actual:${xid}`)
+  assert((base == 'index.md'), `actual:${base}`)
+})();
+
+
+(()=>{
+  const s3fn = 'blueink/ya14/1202-Y3k2/index.md';
+  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
+  assert((Bucket == 'blueink'))
+  assert((Key == 'ya14/1202-Y3k2/index.md'))
+  assert((subsite == 'ya14'))
+  assert((xid == '1202-Y3k2'))
+  assert((base == 'index.md'))
+})();
+
+
+(()=>{
+  const s3fn = 's3://blueink/ya14/tests/1202-Y3k2/index.md';
+  const {Bucket,Key, subsite,xid,base} = parse_s3filename(s3fn)
+  assert((Bucket == 'blueink'))
+  assert((Key == 'ya14/tests/1202-Y3k2/index.md'))
+  assert((subsite == 'ya14/tests'))
+  assert((xid == '1202-Y3k2'))
+  assert((base == 'index.md'))
+})();
+
+
+(()=>{
+  const s3fn = 'blueink/ya14/1202-Y3k2/index.html';
+  const {Bucket,Key, subsite,xid,base,ext} = parse_s3filename(s3fn)
+  assert((Bucket == 'blueink'))
+  assert((Key == 'ya14/1202-Y3k2/index.html'))
+  assert((subsite == 'ya14'))
+  assert((xid == '1202-Y3k2'))
+  assert((base == 'index.html'), `actual ${base}`)
+  assert((ext == '.html'))
+})();
+
+
+(()=>{
+  const s3fn = 's3://blueink/ya14/1202-Y3k2/index.html';
+  const {Bucket,Key, subsite,xid,base,ext} = parse_s3filename(s3fn)
+  assert((Bucket == 'blueink'))
+  assert((Key == 'ya14/1202-Y3k2/index.html'))
+  assert((subsite == 'ya14'))
+  assert((xid == '1202-Y3k2'))
+  assert((base == 'index.html'), `actual ${base}`)
+  assert((ext == '.html'))
+})();
+
+(()=>{
+  const s3fn = 's3://blueink/ya14/1202-Y3k2';
+  const {Bucket,Key, subsite,xid,base,ext} = parse_s3filename(s3fn)
+  assert((Bucket == 'blueink'))
+  assert((Key == 'ya14/1202-Y3k2'))
+  assert((subsite == 'ya14'))
+  assert((xid == '1202-Y3k2'))
+  assert((base == null), `actual ${base}`) // base is an object.
+  assert((ext == null))
+})();

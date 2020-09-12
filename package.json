@@ -11,6 +11,10 @@
     "@babel/runtime": "^7.7.6",
     "aws-sdk": "^2.737.0",
     "cheerio": "^1.0.0-rc.3",
+    "dictionary-de": "^2.0.4",
+    "dictionary-en": "^3.0.1",
+    "dictionary-en-us": "^3.0.0",
+    "dictionary-fr": "^2.5.1",
     "file-regex": "^3.1.0",
     "find": "^0.3.0",
     "fs-extra": "^8.1.0",
@@ -21,8 +25,11 @@
     "marked": "^0.8.0",
     "massive": "^6.6.0",
     "meteor-node-stubs": "^1.0.0",
+    "nspell": "^2.1.2",
     "pg-monitor": "^1.4.1",
-    "shortid": "^2.2.15"
+    "sha1": "^1.1.1",
+    "shortid": "^2.2.15",
+    "url-parse": "^1.4.7"
   },
   "meteor": {
     "mainModule": {

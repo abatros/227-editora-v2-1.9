@@ -176,6 +176,7 @@ module.exports.setCustom = function (format) {
 
 
 module.exports.read_directory = async function (fpath) {
+  throw "FATAL@179"
   if (typeof fpath !== 'string') {
     const err_msg = `@450 read_directory `;
     console.log(err_msg,{fpath})
@@ -340,4 +341,84 @@ module.exports.putObject = async function (cmd) {
 
   throw '@38 MUST BE S3://BUCKET'
 
+}
+
+
+// --------------------------------------------------------------------------
+
+module.exports.fix_folder = fix_folder;
+
+async function fix_folder(s3fn) {
+  /*
+      - readdir
+      - for each (index.md) file
+          - write the same without extension
+  */
+
+  const {Bucket,Key} = parse_s3filename(s3fn)
+
+  const retv = await s3.readdir({
+    Bucket,
+    Prefix: Key,
+    Delimiter: '/index.md'
+  });
+  console.log(`@357 readdir =>`,retv)
+  const list = retv.list.filter(it => it.Prefix)
+  for (li of list) {
+    console.log(`- mk object for `,li.Prefix)
+    const {dir,base} = path.parse(li.Prefix)
+    console.log(`- mk object for <${dir}>`)
+    const retv = await s3.putObject({
+      Bucket,
+      Key:dir,
+      Body: 'just to keep busy.',
+      ContentType: 'text/plain',
+      ACL: 'public-read'
+    })
+    console.log(`@377 putObject =>`,retv)
+  }
+}
+
+// --------------------------------------------------------------------------
+
+module.exports.fix_folder_v2 = fix_folder_v2;
+
+async function fix_folder_v2(s3fn) {
+  /*
+      - readdir
+      - for each (index.md) file
+          - write the same without extension
+  */
+
+  const {Bucket,Key} = parse_s3filename(s3fn)
+
+  const retv = await s3.readdir_nofix({
+    Bucket,
+    Prefix: Key,
+    Delimiter: '/index.md'
+  });
+  //  console.log(`@357 readdir =>`,retv.CommonPrefixes)
+
+  const list = retv.CommonPrefixes.filter(it => (it.Prefix && it.Prefix.endsWith('/index.md')));
+  //  console.log(`@358 readdir =>`,list)
+  for (li of list) {
+    const {dir,base} = path.parse(li.Prefix);
+    const new_Key = dir+'.md';
+    console.log(`- move object <${Bucket}> <${li.Prefix}> to <${new_Key}>`)
+    const retv1 = await s3.copyObject({
+      CopySource: `/${Bucket}/${li.Prefix}`,
+      Bucket,
+      Key: new_Key,
+      ContentType: 'text/plain',
+      ACL: 'public-read'
+    })
+    console.log(`@415 copyObjectResult =>`,retv1.CopyObjectResult)
+
+    const retv2 = await s3.deleteObject({
+      Bucket,
+      Key: dir,
+    })
+    console.log(`@421 deleteObject =>`,retv2)
+
+  }
 }
