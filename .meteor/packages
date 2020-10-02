@@ -27,3 +27,5 @@ session
 perak:codemirror
 manuel:reactivearray
 omega:json-protocol
+meteorhacks:ssr
+universe:i18n

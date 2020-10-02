@@ -3,14 +3,16 @@ const assert = require('assert')
 const AWS = require('aws-sdk');
 const util = require('util')
 const path = require('path')
-const {parse_s3filename} = require('/shared/utils.js')
+const yaml = require('js-yaml')
+
+const {parse_s3filename} = require('../../shared/utils.js')
 
 const endpoint='us-east-1.linodeobjects.com'
 
 
 
 // -------------------------------------------------------------------------
-
+const verbose =0;
 let _s3client;
 
 module.exports = s3connect;
@@ -73,6 +75,7 @@ function s3connect(env={}) {
     readdir_nofix,
     parse_s3filename,
     listObjectVersions,
+    listObjectVersions2,
     deleteObject,
     deleteObjects,
     ping: ()=>{return 'pong'},
@@ -80,6 +83,8 @@ function s3connect(env={}) {
     removeLatestVersion,
     copyObject,
     moveObject,
+    purgeObject,
+    putBucketVersioning,
 //    connect: ()=>{return _s3client},
   }
 }
@@ -160,7 +165,7 @@ async function listObjects(p1) {
 // --------------------------------------------------------------------------
 
 async function getObject(p1) {
-  const verbose =1;
+  const verbose =0;
   const etime_ = new Date().getTime()
 
   if (typeof p1 == 'string') {
@@ -175,10 +180,16 @@ async function getObject(p1) {
 
 
   const {Bucket,  Key, VersionId} = p1;
+
   const p1_ = {Bucket,  Key, VersionId};
 
   return new Promise((resolve, reject) =>{
+    const {Bucket,  Key, VersionId} = p1_;
+    const {ext} = path.parse(Key)
+
     const o1 = _s3client.getObject(p1_, (err,data)=>{
+      //console.log(`@190 ext:${ext}`)
+
       if (err) {
         // MOSTLY file-not-found
         ;(verbose >0) && console.log('@181 ',{err},{p1_})
@@ -189,6 +200,9 @@ async function getObject(p1) {
       //console.log(`@180 getObject `,{data})
 
       const {code, ETag, Body, LastModified} = data;
+
+      //console.log(`@202 ext:${ext}`)
+
       const retv = {
         Bucket, Key,
         code, ETag, Body, VersionId, LastModified, Body,
@@ -196,6 +210,7 @@ async function getObject(p1) {
         etime: new Date().getTime() - etime_
       }
 
+      ;(verbose >0) && console.log('getObject => ',retv)
       resolve(retv);
     })
   })
@@ -206,32 +221,86 @@ async function getObject(p1) {
 function content_type(fn) {
   const {ext} = path.parse(fn);
   switch(ext.toLowerCase()) {
-    case '.md' : return 'text/md';
+    case '.md' : return 'text/plain';
     case '.yaml' : return 'text/yaml';
-    case '.html' : return 'text/html';
+    case '.html' : return 'text/html;charset=utf8';
     case '.css' : return 'text/css';
     case '.js' : return 'application/javascript';
     case '.json' : return 'application/json';
   }
-  return 'application/text';
+  return 'text/plain';
 }
 
 
-async function putObject(p1) {
+async function putObject(...p1) {
+  const verbose =0;
+  // p1 is an array.
 
+  //console.log(`@239 `,{p1})
+
+  function parse_args(p1) {
+    const verbose =1;
+    assert(Array.isArray(p1));
+    ;(verbose >0) && console.log(`@243 `,{p1})
+
+    if (p1.length >2) {
+      throw '@247 too many arguments'
+    }
+    if (p1.length == 2) {
+      const [s3fn, Body] = p1;
+      ;(verbose >0) && console.log(`@245 `,{s3fn})
+      const {Bucket,Key} = parse_s3filename(s3fn);
+      ;(verbose >0) && console.log(`@246 `,{Bucket},{Key})
+      return {Bucket,Key,Body}
+    }
+
+    p1 = p1[0]
+    // here it's an object
+    assert(typeof p1 != 'string')
+
+    if (!p1.Bucket) {
+      const s3fn = p1.s3fn || p1.s3_url;
+      assert(s3fn, "@263 missing Key");
+      const {Bucket,Key} = parse_s3filename(s3fn);
+      assert(p1.data, "@264 missing data");
+      return {Bucket,Key,Body:p1.data}
+    }
+
+    p1.Body = p1.Body || p1.data;
+    return p1;
+  }
+
+  /*
   const {s3_url} = p1;
 
+  ;(verbose >0) && console.log(`@225 putObject p1:`,p1);
   if (s3_url) {
     const {Bucket,Key} = parse_s3filename(s3_url);
     Object.assign(p1,{Bucket,Key})
+  } */
+
+
+  p1 = parse_args(p1);
+  //console.log(`@264 `,{p1})
+  if(!p1.Bucket || !p1.Key) {
+    console.log(`@274 `,{p1})
+    throw 'fatal@275';
   }
 
+  assert(p1.Body)
 
+  p1 = Object.assign({
+    ACL: 'public-read',
+    ContentType: content_type(p1.Key), // automatic
+    ContentEncoding: 'utf8',
+  },p1)
+
+  /*
   const {
     Bucket, Key,
     Body, data, // either
     ACL = 'public-read',
-    ContentType = content_type(Key),
+    ContentType = content_type(Key), // automatic
     ContentEncoding = 'utf8',
   } = p1;
 
@@ -243,57 +312,25 @@ async function putObject(p1) {
       ContentType,
       ContentEncoding,
   };
+  */
 
+  ;(verbose >0) && console.log(`@249 putObject p1:`,p1);
 
   const etime = new Date().getTime()
 
   return new Promise((resolve, reject) =>{
-    const o1 = _s3client.putObject(p1, (err,data)=>{
+    _s3client.putObject(p1, (err,data)=>{
       if (err) {
+        ;(verbose >0) && console.log(`@256 putObject err:`,err);
         reject(err)
         return;
       }
-      resolve(Object.assign(data,{
-        etime: new Date().getTime()-etime,
-      }))
+
+      Object.assign(data, {etime: new Date().getTime()-etime})
+      ;(verbose >0) && console.log(`@262 putObject data:`,data);
+      resolve(data);
     })
   })
-}
-
-
-module.exports.putObject = async function (cmd) {
-  const verbose =1;
-
-  let {s3_url, data:Body} = cmd
-  const {host, pathname, xid} = cmd
-  ;(verbose >0) && console.log('@17: Entering put-s3object ',{cmd})
-
-  s3_url = s3fix(s3_url);
-
-
-  if (s3_url) { // ex: s3://blueink/ya14/1202-Y3K2/1202-Y3K2.index.md
-
-    const {Bucket, Key} = parse_s3filename(s3_url);
-    // Key: ya14/1202-Y3K2/1202-Y3K2.index.md
-    ;(verbose >0) && console.log({Bucket},{Key})
-//    const Key = `${key}/${xid}/${xid}.index.md`;
-    const p2 = {
-        Bucket,
-        Key,
-        Body,
-        ACL: 'public-read',
-        ContentType: content_type(Key),
-        ContentEncoding : 'utf8',
-    };
-    ;(verbose >0) && console.log(`put_s3object `,{p2})
-    const retv1 = await s3.putObject(p2);
-    ;(verbose >0) && console.log({retv1})
-
-    return {status:'ok', s3_url, Bucket, Key}
-  } // s3fpath
-
-  throw '@38 MUST BE S3://BUCKET'
-
 }
 
 
@@ -303,7 +340,7 @@ async function readdir_chunk(p1) {
   const {Bucket, Prefix, Delimiter} = p1;
   return new Promise((resolve,reject)=>{
     assert(p1.Bucket)
-    console.log({p1})
+    // console.log(`@311 readdir_chunk`, {p1})
     _s3client.listObjectsV2(p1, (err,data)=>{
       if (err) {
         console.log({err})
@@ -317,7 +354,7 @@ async function readdir_chunk(p1) {
 }
 
 async function readdir_nofix(p1) {
-  const verbose =1;
+  const verbose =0;
 
   ;(verbose >0) && console.log(`@319 Entering readdir_nofix `,{p1})
 
@@ -331,7 +368,7 @@ async function readdir_nofix(p1) {
   while (true) {
     const data = await readdir_chunk(p1);
     //;(verbose>0) &&
-    ;(verbose >0) && console.log(`@197 readdir:`,data)
+    ;(verbose >0) && console.log(`@339 readdir:`,data)
 //    ;(verbose >0) && console.log(`@198 readdir ():`,data.CommonPrefixes)
 //    prefixes.push(...data.CommonPrefixes)
 //    objects.push(...data.Contents)
@@ -343,12 +380,13 @@ async function readdir_nofix(p1) {
   }
 
 //  ;(verbose >0) && console.log(`@268 `,{objects},{prefixes})
-  return {Contents, CommonPrefixes, Prefix:_Prefix};
+  const Keys = Contents.map(it => (it.Key))
+  return {Contents, CommonPrefixes, Prefix:_Prefix, Keys};
 }
 
 
 async function readdir(p1) {
-  const verbose =1;
+  const verbose =0;
 
   if (typeof p1 == 'string') {p1 = parse_s3filename(p1)}
 
@@ -409,6 +447,210 @@ async function readdir(p1) {
 // --------------------------------------------------------------------------
 
 async function listObjectVersions(p1) {
+  assert(p1, `@420 [${module.id}] missing arg`)
+
+  if (typeof p1 == 'string') {
+    p1 = parse_s3filename(p1)
+  }
+
+  const {Bucket, Key, Delimiter='/'} = p1;
+  let {Prefix=Key} = p1;
+  Prefix = Prefix || '';
+
+  const p2 = {
+    Bucket, Prefix, Delimiter
+  }
+
+  return new Promise((resolve,reject)=>{
+    assert(Bucket)
+    //assert(Prefix)
+    _s3client.listObjectVersions(p2, (err,data)=>{
+      if (err) {
+        console.log({err})
+        reject(err)
+        return;
+      }
+
+//      console.log(`@112: `, data.getCommonPrefixes())
+      ;(verbose >0) && console.log(`@112: `, {data})
+      /*
+        data
+          Name (Bucket name)
+          Prefix
+          Versions []
+            ETag, Size, Key, VersionId, IsLatest, LastModified
+          DeleteMarkers []
+           Key, VersionId, IsLatest, LastModified
+          CommonPrefixes []
+      */
+
+      /************
+      const h ={};
+      if (true) {
+        data.Versions.forEach(it =>{
+          console.log(`470 Version `,{it})
+          const k = `${it.Key}-${it.VersionId}`
+          if(h[k]) {
+            console.log(`@473 already found h[${k}]`,h[k])
+  //          throw 'fatal@474'
+          } else {
+            h[k] = it;
+          }
+        })
+        data.DeleteMarkers.forEach(it =>{
+          console.log(`470 DELETE MARKER `,{it})
+          const k = `${it.Key}-${it.VersionId}`
+          if(h[k]) {
+            console.error(`@473 already found MARKER h[${k}]`,h[k])
+          } else {
+            h[k] = it;
+          }
+        })
+
+      } else {
+        data.Versions.forEach(it =>{
+          console.log(`470 `,{it})
+          assert(!h[it.LastModified]);
+          h[it.LastModified] = it;
+        })
+        data.DeleteMarkers.forEach(it =>{
+          assert(!h[it.LastModified]);
+          h[it.LastModified] = it;
+        })
+      }
+      ************/
+
+      const odir =[];
+      data.Versions.forEach(it =>{
+        const {ETag, Key,VersionId,LastModified,IsLatest, Size} =it;
+        odir.push({ETag, Key,VersionId, Size, LastModified, IsLatest, timeStamp:LastModified.getTime(), type:'V'})
+      });
+      data.DeleteMarkers.forEach(it =>{
+        const {Key,VersionId,LastModified, IsLatest} =it;
+        odir.push({Key,VersionId, LastModified, IsLatest, timeStamp:LastModified.getTime(), type:'DM'})
+      })
+
+      odir.forEach((it,j) =>{
+        console.log(`${j} -- ${it.type} ${it.VersionId} <${it.Key}>`)
+      })
+
+      Objects = odir.map(it => {
+        const {ETag, Key, VersionId, LastModified, type, IsLatest, Size=null} = it
+        return {ETag, Key, VersionId, LastModified, type, IsLatest, Size}
+      });
+
+      resolve(Objects);
+      return;
+
+throw 'break@500'
+      const h_ = Object.keys(h).sort().map(it=> (h[it]));
+
+      resolve(h_)
+    })
+  })
+} // listObjectVersions
+
+// --------------------------------------------------------------------------
+
+async function listObjectVersions2(p1) {
+  assert(p1, `@537 [${module.id}] missing arg`)
+
+  if (typeof p1 == 'string') {
+    p1 = parse_s3filename(p1)
+  }
+
+  /*
+      flag to skip DeleteMarkers
+  */
+
+  const {Bucket, Key, Prefix:Prefix_, Delimiter=''} = p1;
+  const Prefix = Prefix_ || Key || '';
+
+  p1 = {Bucket, Prefix, Delimiter}
+  assert(Bucket)
+
+  return new Promise((resolve,reject)=>{
+    //assert(Prefix)
+    _s3client.listObjectVersions(p1, (err,data)=>{
+      if (err) {
+        console.log({err})
+        reject(err)
+        return;
+      }
+
+      /*
+        data
+          Name (Bucket name)
+          Prefix
+          Versions []
+            ETag, Size, Key, VersionId, IsLatest, LastModified
+          DeleteMarkers []
+           Key, VersionId, IsLatest, LastModified
+          CommonPrefixes []
+      */
+
+      console.log(`@574 `,{data})
+      console.log(`@575 CommonPrefixes ${data.CommonPrefixes.length}`)
+
+      const odir =[];
+
+      const h ={};
+      data.Versions.forEach(it =>{
+        const {ETag, Key,VersionId,LastModified,IsLatest, Size} =it;
+        // here it's an object
+        const {dir,name,ext="***"} = path.parse(Key);
+        const Key_ = path.join(dir,name);
+//        assert(!h[Key_])
+        h[Key_] = h[Key_] || {};
+        Object.assign(h[Key_],{
+          ETag,
+          Key:path.join(dir,name),
+          VersionId, Size, LastModified, IsLatest,
+          ext // make the difference with folders '***' == no extension Ok.
+              // extension starts with dot.
+        });
+      });
+      /*
+      data.DeleteMarkers.forEach(it =>{
+        const {Key,VersionId,LastModified, IsLatest} =it;
+        const {dir,name,ext="***"} = path.parse(Key);
+        // DeleteMarkers have no ETag
+        odir.push({ETag,
+          Key:path.join(dir,name),
+          VersionId, Size, LastModified, IsLatest, ext})
+      })*/
+
+      data.CommonPrefixes.forEach(it =>{
+        const {Prefix} = it;
+        console.log(`@603 (${Prefix}) it:`,it)
+        h[Prefix] = h[Prefix] || {}; // just an entry
+        console.log(`@604 h[${Prefix}]:`,h[Prefix]);
+        Object.assign(h[Prefix], {
+          dir: true,
+          ext: '***',
+          Key: Prefix});
+
+        console.log(`@605 h[${Prefix}]:`,h[Prefix]);
+      });
+
+      console.log(`@615 :`,{h});
+      const keys = Object.keys(h);
+      console.log(`@616 keys:`,keys)
+
+      const Objects = keys.map(Key =>{
+        return h[Key];
+      })
+      console.log(`@617 Objects:`,Objects)
+
+      resolve(Objects);
+    })
+  })
+} // listObjectVersions2
+
+
+// --------------------------------------------------------------------------
+
+async function purgeObject(p1) {
 
   if (typeof p1 == 'string') {
     p1 = parse_s3filename(p1)
@@ -421,6 +663,32 @@ async function listObjectVersions(p1) {
     Bucket, Prefix, Delimiter
   }
 
+  const list = await listObjectVersions(p2);
+
+  const delete_list =[];
+  for (it of list) {
+    if (it.Key !== Prefix) {
+      console.log(`-- ignoring <${it.Key}>`)
+      continue;
+    }
+
+    console.log(`-- delete version <${it.Key}><${it.VersionId}>`)
+    delete_list.push({Key:it.Key, VersionId:it.VersionId})
+  }
+
+
+  for (it of delete_list) {
+    const {Key,VersionId} = it;
+    console.log(`-- delete version <${Key}><${VersionId}>`)
+    const retv = await deleteObject({Bucket,Key,VersionId})
+    console.log(`   -- deleted `,{retv})
+  }
+
+
+  return delete_list;
+
+
+
   return new Promise((resolve,reject)=>{
     assert(Bucket)
     assert(Prefix)
@@ -430,6 +698,7 @@ async function listObjectVersions(p1) {
         reject(err)
         return;
       }
+
 //      console.log(`@112: `, data.getCommonPrefixes())
       /*
         data
@@ -441,10 +710,25 @@ async function listObjectVersions(p1) {
            Key, VersionId, IsLatest, LastModified
           CommonPrefixes []
       */
-      resolve(data)
+
+
+      const h ={};
+      data.Versions.forEach(it =>{
+        assert(!h[it.LastModified]);
+        h[it.LastModified] = it;
+      })
+      data.DeleteMarkers.forEach(it =>{
+        assert(!h[it.LastModified]);
+        h[it.LastModified] = it;
+      })
+
+      const h_ = Object.keys(h).sort().map(it=> (h[it]));
+
+      resolve(h_)
     })
   })
-} // listObjectVersions
+} // purge
+
 
 // ---------------------------------------------------------------------------
 
@@ -493,14 +777,19 @@ async function deleteObjects(p1) {
 
 
 async function headObject(p1) {
+  const verbose =1;
   if (typeof p1 == 'string') {
     p1 = parse_s3filename(p1)
   }
-  ;(!p1.Bucket) && console.log(`@276 `,p1)
-  ;(!p1.Key) && console.log(`@277 `,p1)
-  assert(p1.Bucket)
-  assert(p1.Key)
 
+  const {Bucket,Key} = p1;
+  if (!Bucket || !Key) {
+    console.log(`@770 headObject <${Bucket}><${Key}> `,p1)
+    throw 'fatal@770 headObject'
+  }
+
+  p1 = {Bucket,Key};
+  (verbose >0) && console.log(`@775 headObject params:`,p1)
 
   return new Promise((resolve,reject)=>{
     assert(p1.Bucket)
@@ -515,7 +804,7 @@ async function headObject(p1) {
       resolve(data)
     })
   })
-}
+} // headObject
 
 // ------------------------------------------------------------------------
 
@@ -558,14 +847,22 @@ async function copyObject(params) {
 // --------------------------------------------------------------------------
 
 async function moveObject(params) {
-  const {Bucket, CopySource, Key} = params;
+  const {CopySource, Bucket, Key, ACL, ContentType} = params;
   assert(Bucket, Object.assign(params, {error:`Missing Bucket @556`}))
   assert(CopySource, Object.assign(params, {error:`Missing CopySource @557`}))
   assert(Key, Object.assign(params, {error:`Missing Key @558`}))
 
   try {
-    await copyObject({Bucket, CopySource, Key});
-    await deleteObject({Bucket, Key:CopySource});
+    const retv1 = await copyObject({Bucket, CopySource, Key, ACL, ContentType});
+    console.log(`@569 moveObject retv1:`,retv1);
+
+    // CopySource : /abatros/projects/....
+    const v = CopySource.split('/')
+    v.splice(0,2)
+    console.log(`@573 (${v.join('|')})`)
+
+    const retv2 = await deleteObject({Bucket, Key: v.join('/')});
+    console.log(`@576 moveObject retv2:`,retv2);
     return Object.assign(params, {error:null})
   }
   catch(err) {
@@ -573,8 +870,54 @@ async function moveObject(params) {
   }
 }
 
-
-
-
-
 // --------------------------------------------------------------------------
+
+/*
+ONLY IN CALLBACK....
+console.log(this.request.httpRequest);
+console.log(this.httpResponse);
+*/
+// --------------------------------------------------------------------------
+
+function putBucketVersioning(...params) {
+  switch(params.length) {
+    case 1:
+      assert(typeof params[0] == 'object');
+      params = params[0]
+      break;
+
+    case 2:
+      const [Bucket,Status] = params;
+      params = {
+        Bucket,
+        VersioningConfiguration: { /* required */
+          MFADelete: 'Disabled', // Enabled | Disabled,
+          Status, // Enabled | Suspended
+        },
+      }
+      break;
+    default:
+      console.error(`@708`,{params})
+      throw `Invalid-signature@708`
+  }
+  console.log(`@719 params:`,params)
+//  return _s3client.putBucketVersioning(params).promise()
+
+  return new Promise((resolve,reject)=>{
+    _s3client.putBucketVersioning(params, function(err,data) {
+//      console.log(`@720 this:`,this);
+//      console.log(`@721 `,this.request.httpRequest);
+//      console.log(`@722 `,this.httpResponse);
+      console.log(`@723 `,this.httpResponse.Body);
+
+      if (err) {
+        console.log(`@724 error:`, error)
+        reject(err);
+        return;
+      }
+      console.log(`@725 params:`, data)
+      resolve(data)
+    })
+  })
+
+}

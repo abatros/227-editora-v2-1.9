@@ -25,7 +25,21 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
+
+    flex-grow:1; text-align:left;
+    font-size:12pt; line-height:18pt;
+    font-family:arial; color:#232323; margin-left:10px;"
+
+    }
+
+    form button.folder {
+      color: #0905b1;
+      font-weight:bold;
+    }
+    form button.folder:hover {
+      color: #555555;
+    }
+
    </style>
 </head>
 
@@ -59,66 +73,16 @@
       ">
 
     {{#each sdir}}
-    <form _name="dir-entry" class="{{this.type}}" name="{{this.name}}">
-      <hbox class="qj directory-item" >
+    <form class="js-cwd {{this.dir}}" name="{{this.fn}}">
+      <hbox class="qj directory-item">
         <input type="checkbox" name="check" value="">
-      {{#if this.Prefix}}
-        {{#if this.Key}}
-        <!-- both Key and Prefix -->
 
-        [o]<button class="sammy-nowrap-2"
-        style="flex-grow:1; text-align:left; font-size:12pt; line-height:18pt; font-family:arial; color:#232323; margin-left:10px;"
-        type="submit" name="edit"
-          >{{this.name}}</button>
-        <button style="_flex-grow:0;white-space: nowrap;" type="submit" name="enter">[ enter ]</button>
+        <button class="sammy-nowrap-2  {{this.dir}}"
+        type="submit" name="{{this.dir}}"
+          >{{this.fn}}</button>
 
-
-        {{else}}
-        <!-- ONLY Prefix no need for enter -->
-
-        [x]<button class="sammy-nowrap-2"
-        style="flex-grow:1; text-align:left; font-size:12pt; line-height:18pt; font-family:arial; color:#232323; margin-left:10px;"
-        type="submit" name="enter"
-          >{{this.name}}</button>
-
-
-        {{/if}}
-      {{else}}
-        {{#if this.Key}}
-        <!-- ONLY Key -->
-
-
-        [o]<button class="sammy-nowrap-2"
-        style="flex-grow:1; text-align:left; font-size:12pt; line-height:18pt; font-family:arial; color:#232323; margin-left:10px;"
-        type="submit" name="preview"
-          >{{this.name}}</button>
-
-
-
-        {{else}}
-        <!-- NOTHING ALERT -->
-        ALERT {{this.name}}
-        {{/if}}
-      {{/if}}
       </hbox>
     </form>
-
-      <!--
-      <input type="checkbox" name="check" value="">
-      {{#if this.Key}}
-      [o]
-      {{else}}
-      [x]
-      {{/if}}
-      <button class="sammy-nowrap-2"
-      style="flex-grow:1; text-align:left; font-size:12pt; line-height:18pt; font-family:arial; color:#232323; margin-left:10px;"
-      type="submit" name="preview"
-        >{{this.name}}</button>
-
-      {{#if this.Prefix}}
-      <button style="_flex-grow:0;white-space: nowrap;" type="submit" name="edit">[ enter ]</button>
-      {{/if}}
-  -->
     {{/each}}
   </vbox>
 </template>

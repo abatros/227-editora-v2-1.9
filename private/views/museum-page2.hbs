@@ -1,0 +1,263 @@
+{{{doctype}}}
+<html>
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-78727017-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-78727017-3');
+</script>
+
+<title>{{it.data.h1}}</title>
+<meta charset="utf-8">
+<meta content="text/html" http-equiv="Content-Type">
+<meta name="keywords"
+  content="museum, chauffage, encyclopedia, catalog, thermostat, antique">
+
+<meta name="google-site-verification" content="9azUpBj4YRYKPyl-AlAl_zJEtKUuUegqIR5EeUe45Xs" />
+
+<meta name="description"
+  content="Musée Ultimheat Anciens Appareils de Chauffage et de Cuisson - {{it.h1}} - {{it.h2}}">
+
+<style>
+a, a:visited, a:hover, a:active {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.js-refa {
+  color: brown;
+  text-decoration: underline;
+}
+</style>
+
+<style>
+@import url("https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css");
+@import url("https://fonts.googleapis.com/css?family=Oswald:600:300");
+
+.qc {
+  text-align:center;
+}
+
+article {
+  font-family: lato;
+//  max-width: 600pt;
+}
+
+section.data {
+  text-align:center;
+}
+
+h1 {
+  font-size: 19pt;
+  line-height: 20pt;
+  font-weight: bold;
+_color: brown;
+  color: rgba(156,71,50,0.98);
+  margin: 20px 10px 2pt 10px;
+}
+
+h3 {
+  font-size: 12pt;
+  line-height: 18pt;
+  font-weight: normal;
+  margin: 0;
+  padding: 0pt;
+}
+
+
+h3.yp label {
+  color: rgb(180,180,180);
+  font-family: 'Oswald';
+  font-weight: 600;
+}
+
+p {
+  text-align: left;
+  font-size: 14pt;
+  line-height: 20pt;
+  margin: 5pt 30pt;
+}
+
+div.pdf {
+  margin: 0 0 10pt 0;
+}
+
+.pdf-logo1 {
+  width: 30px;
+  margin-bottom: -10px;
+}
+
+div.pdf a {
+  text-decoration: none;
+  font-weight: bold;
+  color: rgb(100,100,100);
+}
+
+a.click-ici {
+  border: 1px solid black;
+  background: #e3caca;
+  padding: 2px 10px;
+  font-family: 'Oswald';
+  font-weight: 600;
+  color: white;
+}
+a.click-ici:hover {
+  color:black;
+}
+</style>
+
+</head>
+
+<body style="max-width:600pt;margin:0 auto;">
+
+  <hr>
+  <h1 class="qc" style="  font-family: 'Oswald';
+    font-weight: 600;
+">
+    Ultimheat.com &mdash; Musée du Chauffage
+  </h1>
+  <div class="qc" style="margin:15px 0;">
+    <i>Visitez notre WebApp</i> <b>&rarr;</b> <a class="click-ici" href="http://museum.ultimheat.com">cliquer ici</a>
+  </div>
+  <hr>
+
+  <article>
+    <section class="data">
+        <div class="img">
+          {{#if it.data.pic}}
+          {{#if it.data.reserved}}
+          [image reserve]
+          {{else}}
+          <img src="http://museum-assets.ultimheat.com/jpeg-www/{{it.data.pic}}.jpg"
+            style="max-height:500px;">
+          {{/if}}
+          {{/if}}
+        </div>
+
+          <h1 class="soc1">
+            {{it.data.h1}}
+          </h1>
+
+          {{#if it.data.h2}}
+          <h3 class="soc2">
+          {{it.data.h2}}
+          </h3>
+          {{/if}}
+
+          <h3 class="country fr">
+          </h3>
+
+          {{#if it.data.yp}}
+          <h3 class="yp">
+            <label>{{_ 'year-published'}} : </label>
+            {{it.data.yp}}
+            {{#if it.data.circa}}
+            circa
+            {{/if}}
+          </h3>
+          {{/if}}
+
+          {{#if it.data.ci}}
+          <h3 class="city">
+            <span style="font-family: FontAwesome;">&#xf0ac;&nbsp;</span>
+            {{it.data.ci}}
+          </h3>
+          {{/if}}
+
+          {{#if it.data.sa}}
+          <h3 class="address">
+            {{it.data.sa}}
+          </h3>
+          {{/if}}
+
+          <h3 style="margin-top:5pt;">
+            {{#if it.data.aka}}
+              <span class="narrow">{{_ 'founded-as'}}</span> : {{it.data.aka}}
+              {{#if it.data.yf}}
+                &emsp;<span class="narrow">{{_ 'year-founded'}} : </span>
+                {{it.data.yf}}
+              {{/if}}
+            {{else}}
+            {{#if it.data.yf}}
+              <span class="narrow">{{_ 'year-founded'}} : </span> {{it.data.yf}}
+            {{/if}}
+            {{/if}}
+          </h3>
+
+          {{#if it.data.mk}}
+          <div class="brands">
+            <i class="fa fa-tag btag"></i>
+            {{#each b in it.data.mk}}
+              <span class="mtag">&ndash;&nbsp;<a href="#">{{b}}</a></span>
+            {{/each}}
+
+          </div>
+          {{/if}}
+
+  </section>
+
+
+    {{#if isTranscription}}
+    <div class="qc">
+    <i>Transcription</i>
+    </div>
+    {{/if}}
+
+    {{#if it.data.fr}}
+    <hr>
+    <p class="fr">{{it.data.fr}}</p>
+    {{/if}}
+
+    {{#if it.data.en}}
+    <hr>
+    <p class="en">{{it.data.en}}</p>
+    {{/if}}
+
+    {{#if it.data.zh}}
+    <hr>
+    <p class="cn">{{it.data.zh}}</p>
+    {{/if}}
+
+    {{#if it.data.links}}
+    <hr>
+    <div class="qc">
+    {{#each pdf in it.data.links}}
+    <div class="pdf inb">
+      <img class="pdf-logo1" src="http://www.ultimheat.com/pdf_logo.jpg">
+      {{#if it.data.reserved}}
+      <a href="#" target='_blank'>
+        PDF <span class="pdf-data" style="font-weight:300;">{{pdf.com}} page(s) (Non communicable)</span>
+      </a>
+      {{else}}
+      <a href="http://museum-assets.ultimheat.com/pdf-www/{{pdf.fn}}.pdf" target='_blank'>
+        PDF <span class="pdf-data" style="font-weight:300;">{{part @index}}{{pdf.com}} page(s)</span>
+      </a>
+      {{/if}}
+    </div>
+    &emsp;
+    {{/each}}
+  </div>
+    {{/if}}
+    <hr>
+
+    </article>
+
+
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-3937762-5']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+
+</body>
+</html>

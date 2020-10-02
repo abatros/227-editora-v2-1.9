@@ -2,6 +2,55 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700');
 @import url("https://fonts.googleapis.com/css?family=IM+Fell+DW+Pica");
 
+hbox, .hbox, .hbox-ql {
+  display: flex;
+  flex-wrap: none;
+  flex-direction: row;
+  align-items: baseline;
+  _justify-content: space-between;
+}
+
+
+.hbox-qc {
+		display: flex;
+		flex-wrap: none;
+		margin-right: auto;
+		margin-left: auto;
+		margin-bottom:10px;
+}
+
+.hbox-qj {
+		display: flex;
+		flex-wrap: none;
+		flex-direction: row;
+		align-items: baseline;
+		justify-content: space-between;
+}
+
+.space-evenly {
+  justify-content: space-evenly;
+}
+
+.space-between {
+  justify-content: space-between;  
+}
+
+
+vbox, .vbox, .vbox-top {
+  display: flex;
+  _flex-wrap: none;
+  flex-direction: column;
+  _align-items: baseline;
+  _justify-content: space-between;
+}
+
+
+
+.hss, .vss {
+		flex-grow:1;
+}
+
+
 body {
   padding: 10px;
   font-family: sans-serif;

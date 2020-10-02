@@ -1,0 +1,661 @@
+import path from 'path';
+import yaml from 'js-yaml';
+import assert from 'assert';
+
+import {extract_metadata} from '/shared/utils.js'
+let db = null; //  must be in async await postgres_connect();
+const {postgres_connect} = require('/server/lib/postgres-connect.js')
+
+const verbose =0;
+
+
+
+
+
+/****************************************************************************
+
+  Get htmp-page from s3://museum
+
+  specific to Museum:
+
+    - s3://museum/pages/9444-1931-felmon.html
+
+*****************************************************************************/
+
+const s3 = require('../lib/aws-s3.js')();
+
+async function s3_static(req,res) {
+  const etime = new Date().getTime();
+
+  const v = req.params.id.match(/^([0-9]+)/);
+  if (!v || v.length < 2) {
+    res.status(200).send(`Invalid request.params.id (${req.params.id})`);
+    return;
+  }
+
+  const item_id = v[1];
+
+
+  /*
+  const retv1 = await s3.listObjects({
+    Bucket: 'museum',
+    Prefix: 'pages/6010',
+    Delimiter: '.html'
+  }) // => {err, Body, Bucket, Key}
+  */
+
+  const retv1 = await s3.getObject({
+    Bucket: 'museum',
+    Key: 'pages/'+ req.params.id
+  }) // => {err, Body, Bucket, Key}
+
+
+//  res.send(`hello etime:${new Date().getTime() - etime} ms.`)
+  //res.writeHead(200,{'Content-Type':'text/html'})
+//  const o = yaml.safeLoad(retv1.data)
+
+
+  (verbose >0) && console.log(`@43 `,{retv1})
+};
+
+
+async function s3_render(req,res) {
+  const etime = new Date().getTime();
+
+
+  const retv1 = await s3.getObject({
+    Bucket: 'museum',
+    Key: 'pages/'+ path.join(req.params.id,'page.md')
+  }) // => {err, Body, Bucket, Key}
+
+
+  const {meta} = extract_metadata(retv1.data)
+  meta.mk = meta.mk || [];
+  meta.links = meta.links || [];
+  res.render('museum-page', meta);
+
+  (verbose >0) && console.log(`@43 `,meta)
+};
+
+// ---------------------------------------------------------------------------
+
+let s3_index_compiled =null;
+
+async function s3_index(req, res) {
+  const {refresh=false} = req.query;
+
+  if (!s3_index_compiled) {
+    s3_index_compiled = SSR.compileTemplate('s3-index', Assets.getText('views/s3-index.hbs'));
+    (verbose >0) && console.log(`@79 `,{s3_index_compiled})
+  }
+
+  let index;
+  let Keys;
+  if (refresh) {
+    res.end('refreshing...')
+    Keys = await make_s3_index()
+  } else {
+    const retv1 = await s3.getObject({
+      Bucket: 'museum',
+      Key: 'index-catalogs.html'
+    })
+    Keys = JSON.parse(retv1.data);
+  }
+
+  index = reformat_s3_index(Keys)
+  res.status(200)
+    .end(SSR.render('s3-index',{data:index}))
+
+  //res.render('s3_index', {data:index});
+  //console.log(`@88 `,{index})
+} // index-catalogs
+
+
+function reformat_s3_index(Keys) {
+  return Keys.map(xid =>{
+    //console.log(`@102 `,{xid})
+    const v = xid.match(/^pages\/(\d+)\-([^\-]+)\-(.*)$/)
+    if (v) {
+      const [,iSeq,yp,title_] = v
+      return {yp,xid,iSeq,title_}
+    }
+  }).filter(it=>(it!=null))
+}
+
+async function make_s3_index() {
+  (verbose >0) && console.log(`@96 refreshing...`)
+  const retv1 = await s3.readdir_nofix({
+    Bucket: 'museum',
+    Prefix: 'pages/',
+    Delimiter: '/'
+  })
+
+  const retv2 = await s3.putObject({
+    Bucket: 'museum',
+    Key: 'index-catalogs.html',
+    Body: JSON.stringify(retv1.Keys),
+  })
+
+  (verbose >0) && console.log(`@137 `,{retv2})
+
+//  const index = reformat_s3_index(retv1.Keys);
+
+  return retv1.Keys
+}
+
+// ---------------------------------------------------------------------------
+
+async function list_articles(o) {
+  const verbose =1;
+  const {path} = o;
+  assert(path.startsWith('museum.md'))
+
+  const etime = new Date().getTime();
+
+  /*
+  if (!db) {
+      console.log(`@120 INIT POSTGRES/BLUEINK CONNECTION`)
+    db = await postgres_connect()
+  }*/
+
+  const blueink = await postgres_connect();
+
+//  const db = await postgres_connect()
+  try {
+  const data = await blueink.query(`
+    select
+       data->'indexNames' as indexNames,
+       data->'links' as links,
+       data->>'yp' as yp,
+       (data->>'transcription')::boolean as transcription,
+       (data->>'restricted')::boolean as restricted,
+       data->>'xid' as xid,
+       data->'mk' as mk,
+       data->'auteurs' as auteurs,
+       data->>'h1' as h1,
+       (data->>'sec')::integer as sec
+    from adoc.page, adoc.file
+    where (file_id = id) and (path <@ $1)
+    -- and ((data->>'sec')::integer > 2)
+    and (data->>'mk' is not null)
+    -- order by data->>'yp'
+    ;
+    `,[path],{single:false})
+  // console.log({data})
+//  if (!o.db) db.instance.$pool.end();
+
+  // now we can process the data.
+
+  ;(verbose >0) && console.log(`@171 [${module.id}] found ${data.length} articles.`)
+
+  return {data,
+    etime: new Date().getTime() - etime
+  }
+} catch(err) {
+  throw err;
+}
+} // list-articles
+
+// ---------------------------------------------------------------------------
+
+let index_auteurs_compiled =null; // template
+
+
+async function index_auteurs_Obsolete(req, res) {
+  const {refresh=false} = req.query;
+
+  if (!index_auteurs_compiled) {
+    index_auteurs_compiled = SSR.compileTemplate('index-auteurs', Assets.getText('views/index-auteurs.html'));
+    ;(verbose >0) && console.log(`@79 `,{index_auteurs_compiled})
+  }
+
+
+  const retv1 = await list_articles({path:'museum.md.a'})
+  ;(verbose >0) && console.log(`@186 [${module.id}] found ${retv1.data.length} articles.`)
+
+//  console.log({data})
+
+  retv1.data.forEach(it =>{
+    ;(verbose >0) && console.log(`--- `,it)
+  })
+
+  const alist = extract_auteurs(retv1.data)
+  ;(verbose >0) && console.log({alist})
+
+
+      const y = alist.map(({auteur:auteurName, articles:titres})=>{
+        //console.log(`--v[${k}]:`,v);
+  //      assert(titres[0].restricted !== undefined)
+        if (!titres || titres.length <1) {
+          titres.push({
+            fn:"TRANSCRIPTIONx"
+          })
+          throw 'stop-24'
+        } else {
+          if (!Array.isArray(titres)) {
+            console.error(titres); throw 'fatal-29'
+          }
+
+          titres.forEach(titre=>{
+            titre.links.forEach((pdf)=>{
+              pdf.fn2 = pdf.fn
+              .replace(/^[0-9\s]*\s*/,'')
+              .replace(/[\s\-]*[0-9]+$/,'');
+            })
+          })
+        };
+
+        titres.sort((a,b)=>(a.yp.localeCompare(b.yp)));
+
+        return {
+          auteurName,
+          titres
+        };
+      });
+
+      y.sort((a,b)=>{
+        //console.log(`--${a.auteurName}`)
+        return a.auteurName.localeCompare(b.auteurName)
+      });
+
+
+  res.status(200)
+    .end(SSR.render('index-auteurs',{auteurs:y}))
+
+}
+
+
+function extract_auteurs(xlsx) { // 1-1 relation with xlsx
+  const _au = {}
+  let mCount = 0;
+  for (const xe of xlsx) {
+    const {xid, yp, indexnames:indexNames, auteurs, links, transcription, restricted} = xe;
+    // each xlsx-entry can generate multiple entry in marques.
+
+    if (!indexNames || !auteurs) {
+      console.error(`@328 fatal:`,{xe})
+      process.exit(-1)
+    }
+
+//    console.log(`@332 fatal:`,{indexnames})
+
+    const _auteurs = auteurs.map(j=>(j.trim())).filter(j=>(j.length>0)); // FIX.
+
+    if (!_auteurs || (_auteurs.length<1)) {
+      notice(`j:${j} titre:${JSON.stringify(indexNames)}`);
+      mCount++;
+      notice (`mapp_index_byMarques =>fatal title without marque xid:${xid} ${mCount}/${j}`);
+      continue;
+    }
+  //  notice(titre.sec);
+
+
+    _auteurs.forEach((au1)=>{
+      if (au1.length<1) throw `fatal-65`;
+      if (au1.trim().length<1) throw `fatal-66`;
+      _au[au1] = _au[au1] || [];
+
+      _au[au1].push({
+        h1 : indexNames[0],
+  	    xid,
+  	    yp,
+  	    links, // pdf
+  	    transcription,
+  	    restricted
+  	  })
+    });
+  }; // loop.
+
+
+  const alist = Object.keys(_au).map(au1 => ({
+      auteur: au1 || '*null*',		// marque === iName
+  //    nc: marques[mk1].length,
+      articles: _au[au1]	// list of catalogs.
+  }))
+  .sort((a,b) =>{
+    if (a.auteur < b.auteur) return -1;
+    if (a.auteur > b.auteur) return 1;
+    return 0;
+  });
+
+  return alist;
+}
+
+// ---------------------------------------------------------------------------
+
+//    xid/8523
+
+let page_compiled =null;
+let page_template_compiled =null;
+
+function compile(tpName) {
+  const compiled = SSR.compileTemplate(tpName, Assets.getText(`views/${tpName}.html`));
+}
+
+
+async function page(req, res) {
+  const {xid} = req.params;
+
+  if (!db) {
+      console.log(`@120 INIT POSTGRES/BLUEINK CONNECTION`)
+    db = await postgres_connect()
+  }
+
+
+  page_compiled = page_compiled || compile('page')
+  page_template_compiled = page_template_compiled || compile('page-template')
+
+
+  const page = await db.query(`
+    select *
+    from adoc.pagex
+    where (path <@ 'museum.md') and (xid = $1)
+    ;`,[xid],{single:true});
+
+
+//  .then( page =>{
+    (verbose >0) && console.log(`@25: page `,page)
+    const html = SSR.render('page',{
+      it:page,
+      isTranscription: ()=>{
+        return (page.data.transcription);
+      },
+      part: (x)=>{
+        if (x>0) {
+          return `part:${x+1} - `;
+        }
+      },
+      _: function(key){return i18n.__(key)}
+    });
+
+    //console.log(`etime: ${new Date().getTime()-etime}`);
+
+    res.status(200)
+      .end(SSR.render('page-template',{
+        html:html
+      }));
+
+
+  res.status(200).end(`ok <${xid}>`)
+}
+
+
+// ---------------------------------------------------------------------------
+
+async function index_marques_json(req, res) {
+  const verbose =1;
+  const etime_ = new Date().getTime();
+  const audit =[];
+
+  const retv1 = await s3.getObject('s3://museum/index-marques.json')
+  let {data:list} = retv1;
+
+  audit.push({etime:new Date().getTime()-etime_, label:`getObject(json)`})
+
+  if (!list) {
+    const {list} = await rebuild_index_marques();
+    audit.push({etime:new Date().getTime()-etime_, label:`rebuild`})
+    const retv3 = s3.putObject('s3://museum/index-marques.json', JSON.stringify(list));
+    audit.push({etime:new Date().getTime()-etime_, label:`putObject(json)`})
+  }
+
+  index_marques_compiled = index_marques_compiled
+    || SSR.compileTemplate('index-marques', Assets.getText('views/index-marques.html'));
+
+  const html = SSR.render('index-marques', {marques:JSON.parse(list)});
+  audit.push({etime:new Date().getTime()-etime_, label:`rendering`})
+
+  res.status(200).end(html);
+  audit.push({etime:new Date().getTime()-etime_, label:`sending`})
+
+  console.log(`@406 audit (index-marques-html):\n`,
+    audit.map((it,j) =>{
+      const _etime = (j>0)? it.etime - audit[j-1].etime: it.etime;
+      return `-- ${it.etime} [${_etime}] ${it.label}`;
+    }).join('\n'))
+
+} // index-marques
+
+
+async function index_marques_html(req, res) {
+  const verbose =1;
+  const etime_ = new Date().getTime();
+  const audit =[];
+
+  const retv1 = await s3.getObject('s3://museum/index-marques.html')
+  let {data:html} = retv1;
+
+  audit.push({etime:new Date().getTime()-etime_, label:`getObject`})
+  if (!html) {
+    const {html,list} = await rebuild_index_marques();
+    audit.push({etime:new Date().getTime()-etime_, label:`rebuild`})
+    const retv2 = await s3.putObject('s3://museum/index-marques.html', html);
+    audit.push({etime:new Date().getTime()-etime_, label:`putObject`})
+  }
+
+
+  res.status(200).end(html);
+  audit.push({etime:new Date().getTime()-etime_, label:`sending`})
+  console.log(`@429 audit (index-marques-html):\n`,
+    audit.map((it,j) =>{
+      const _etime = (j>0)? it.etime - audit[j-1].etime: it.etime;
+      return `-- ${it.etime} [${_etime}] ${it.label}`;
+    }).join('\n'))
+} // index-marques
+
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+
+async function handlebars_test(req, res) {
+  const verbose =1;
+  const etime_ = new Date().getTime();
+  const audit =[];
+
+  //console.log(`@619 handlebars-test`)
+//  res.status(200).end(Assets.getText('views/handlebars-test.html'))
+
+  const retv1 = await s3.getObjectMetadata('s3://museum/index-marques.js')
+  audit.push({etime:new Date().getTime()-etime_, label:`getObjectMetadata`})
+
+  if (!retv1.ETag) {
+    const {list} = await rebuild_index_marques();
+    audit.push({etime:new Date().getTime()-etime_, label:`rebuild ${list.length} entries`})
+
+    const jsCode = `
+      var list = ${JSON.stringify(list,null,' ')};
+    `
+    const retv2 = await s3.putObject('s3://museum/index-marques.js', jsCode);
+    audit.push({etime:new Date().getTime()-etime_, label:`putObject`})
+  }
+
+
+
+  const html = await Assets.getText('views/index-marques-handlebars.html');
+  audit.push({etime:new Date().getTime()-etime_, label:`Asset.getText`})
+
+  res.status(200).end(html)
+  audit.push({etime:new Date().getTime()-etime_, label:`sending`})
+
+  console.log(`@644 audit (index-marques-handlebars):\n`,
+    audit.map((it,j) =>{
+      const _etime = (j>0)? it.etime - audit[j-1].etime: it.etime;
+      return `-- ${it.etime} [${_etime}] ${it.label}`;
+    }).join('\n'))
+
+
+} // index-marques-handlebars
+
+// ---------------------------------------------------------------------------
+
+//app.get('/museum-api/index-auteurs', require('./http-server/museum-api.js').index_auteurs)
+
+
+/*
+(req, res, next) => {
+  res.writeHead(200);
+  res.end('Hello world from your server');
+}); */
+
+
+async function index_auteurs_Obsolete2(req, res) {
+  const verbose =1;
+  const etime_ = new Date().getTime();
+  const audit =[];
+
+  const retv1 = await s3.getObjectMetadata('s3://museum/index-auteurs.json')
+  audit.push({etime:new Date().getTime()-etime_, label:`getObjectMetadata(auteurs)`})
+  console.log(`@678 `,{retv1})
+
+  if (!retv1.ETag) {
+    const ix = await rebuild_index_auteurs('.json');
+    console.log(`@682 auteurs ${ix.length}`)
+    const data = JSON.stringify(ix,null,' ');
+
+    const retv2 = await s3.putObject('s3://museum/index-auteurs.json',data)
+    audit.push({etime:new Date().getTime()-etime_, label:`putObject(auteurs.json)`})
+
+
+    res.status(200).end(`updating index-auteurs.
+      Please refresh your browser - preferably using [F5] key.`)
+
+    return;
+  }
+
+  const html = await Assets.getText('views/index-auteurs.html');
+  audit.push({etime:new Date().getTime()-etime_, label:`Asset.getText`})
+
+  res.status(200).end(html)
+  audit.push({etime:new Date().getTime()-etime_, label:`sending`})
+
+  console.log(`@644 audit (index-auteurs):\n`,
+    audit.map((it,j) =>{
+      const _etime = (j>0)? it.etime - audit[j-1].etime: it.etime;
+      return `-- ${it.etime} [${_etime}] ${it.label}`;
+    }).join('\n'))
+} // index_auteurs
+
+
+
+
+
+// ---------------------------------------------------------------------------
+
+
+
+// ---------------------------------------------------------------------------
+
+async function index_titres(req, res) {
+  const verbose =1;
+  const etime_ = new Date().getTime();
+  const audit =[];
+
+  const retv1 = await s3.getObjectMetadata('s3://museum/index-titres.json')
+  audit.push({etime:new Date().getTime()-etime_, label:`getObjectMetadata(titres)`})
+  console.log(`@678 `,{retv1})
+
+
+  if (!retv1.ETag) {
+    console.log(`@682 `,{retv1})
+    const {data:xlsx, error} = await list_articles({path:'museum.md.a'})
+    ;(verbose >0) && console.log(`@389 [${module.id}] found ${xlsx.length} titres.`)
+    audit.push(`${new Date().getTime()-etime_} list-articles (${xlsx.length})`)
+
+    /*
+    await fix_constructeurs(xlsx);
+    audit.push({etime:new Date().getTime()-etime_, label:`rebuild ${xlsx.length} constructeurs`})
+    */
+
+
+    // THIS SHOULD BE DONE ON THE CLIENT if we want to reduce transfer time.
+
+    let xi = XI_titres(xlsx);
+    audit.push({etime:new Date().getTime()-etime_, label:`XI`})
+    xi = JSON.stringify(xi,null,' ');
+
+    const retv2 = await s3.putObject('s3://museum/index-titres.json', xi);
+    audit.push({etime:new Date().getTime()-etime_, label:`putObject(titres)`})
+
+    res.status(200)
+      .end(`index-titres ${xlsx.length} entries has been updated.
+        Please retry preferably using [F5] key.`)
+
+    return;
+  }
+
+
+  const html = await Assets.getText('views/index-titres.html');
+  audit.push({etime:new Date().getTime()-etime_, label:`Asset.getText`})
+
+  res.status(200).end(html)
+  audit.push({etime:new Date().getTime()-etime_, label:`sending`})
+
+  console.log(`@644 audit (index-titres):\n`,
+    audit.map((it,j) =>{
+      const _etime = (j>0)? it.etime - audit[j-1].etime: it.etime;
+      return `-- ${it.etime} [${_etime}] ${it.label}`;
+    }).join('\n'))
+
+
+} // index-titres
+
+
+function XI_titres(xlsx) {
+  // we add an entry for each titre (and alternate inames).
+
+  let mCount = 0;
+  console.log(`@847 entering XI_titres (${xlsx.length})`)
+  const xi = []; // NOT a hash - we accept collisions.
+  for (const a1 of xlsx) {
+    const {item_id, xid, yp, name, title ='*missing*', links=[],
+      transcription, restricted, indexnames:indexNames, auteurs=[]} = a1;
+
+    links.forEach((pdf)=>{
+      pdf.fn2 = pdf.fn
+      .replace(/^[0-9\s]*\s*/,'') // remove 'ca' !!!!
+      .replace(/[\s\-]*[0-9]+$/,'');
+    })
+
+    assert(indexNames, a1, 'fatal-183. Missing indexNames')
+
+    indexNames.forEach((indexName, jj)=>{
+      xi.push ({
+//  	    item_id,
+        indexName,
+        titre_origine: (jj>0)? indexNames[0]:null,
+        xid,
+        yp,
+//        name,
+        links,
+        auteurs,
+        transcription,
+        restricted
+      });
+    }); // an <article> can appear under different names (title) spelling, langues.
+  }; // each article.
+
+  xi.sort((a,b)=>{
+    //console.log(`--${a.auteurName}`)
+    return a.indexName.localeCompare(b.indexName)
+  });
+
+  console.log(`@847 leaving XI_titres (${xi.length})`)
+  return xi;
+} // XI_titres
+
+
+// ---------------------------------------------------------------------------
+
+module.exports = {
+  s3_render,
+  s3_static,
+  s3_index,
+//  index_constructeurs,  // c1,c2
+//  index_marques_html,   // c1,c2
+//  index_marques,        // c1,c2
+//  index_titres,         // a3,a4
+//  index_auteurs,        // a3,a4
+  index_marques_json,
+  handlebars_test,
+  page,
+}

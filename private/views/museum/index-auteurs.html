@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta content="text/html" http-equiv="Content-Type">
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+
+  <script type="text/javascript">
+    const requestURL = 'http://museum.us-east-1.linodeobjects.com/index-auteurs.json';
+    const request = new XMLHttpRequest();
+    request.open('GET', requestURL);
+    request.responseType = 'json'; // that does JSON.parse
+    request.send();
+    request.onload = function() {
+      let index_auteurs = request.response;
+      console.log(`@22 index_auteurs.length:`,index_auteurs.length)
+
+      var template = $("#template-auteurs").html();
+      console.log(`@30 found template length:${template.length}`)
+      const compiledCode = Handlebars.compile(template);
+
+      console.log({index_auteurs})
+
+      var result = compiledCode({index_auteurs}); // from index-constructeurs.js
+      $("#content").html(result);
+    }
+  </script>
+
+
+
+  <script>
+
+    $(document).ready(function(){
+    });
+  </script>
+
+  <style>
+    .red {color:red;}
+    .green {color:green;}
+
+    #index-auteurs {
+       font-family:times;
+    }
+
+    #index-auteurs b {
+       font-family:times;
+       color: rgb(100,100,100)
+    }
+
+    #index-auteurs span.yp {
+      font-family: helvetica;
+      font-size:10pt;
+      font-weight:bold;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+  </style>
+
+
+</head>
+
+<body>
+  <h2 style="margin-bottom:0px;">Index des Auteurs.</h2>
+  <h5 style="margin:0;">Revision: Sept 30, 2020</h5>
+  <br>
+  <div id="content"></div>
+</body>
+
+<script id="template-auteurs" type="text/x-handlebars-template">
+{{#each index_auteurs}}
+<div>
+  <div style="margin:5px 0 0 0; border-bottom:3px solid rgb(230,230,230);padding:0 0 10px 0;">
+    <b>Auteur(s) : </b>
+    <a style="color:#c16604;font-weight:bold;">{{{auteurName}}}</a>
+
+    <div style="margin:5px 0 0 20px;">
+      {{#each titres}}
+        <div style="margin:4px 0 0 0px;">
+          <b>Titre du (des) document(s) :</b><br>
+          <span class="yp"><b>{{yp}}</b></span> &ndash;
+          <a href="page/{{xid}}" target="_blank">{{h1}}</a>
+
+          <span style="font-size:9pt;">[{{xid}}]
+            {{#if restricted}}
+            <span class="red">Restricted</span>{{/if}}
+            {{#if transcription}}
+            <span class="green">Transcription</span>{{/if}}
+          </span>
+
+
+
+          {{#if restricted}}
+          <div style="margin:0 0 0 0px;" class="red">
+            &rarr; Document  sous droits d'auteur, non communicable.
+          </div>
+          {{else}}
+          <div style="margin:4pt 0 0 0px;">
+            <b>Lien(s) vers article(s) :</b>
+            {{#each links}}
+            <div>
+              &emsp;&rarr;
+
+              <div style="display:inline-block">
+                <a href='https://ultimheat.com/s3-museum/{{fn}}.pdf'
+                  target="anotherTab">
+                  {{fn}}.pdf
+                </a>
+              </div>
+
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+  <div style="display:table-cell;padding-left:10px;display:none;">
+    {{latest_auteur}}
+  </div>
+</div>
+{{/each}}
+</div>
+
+</script>
+
+
+</html>

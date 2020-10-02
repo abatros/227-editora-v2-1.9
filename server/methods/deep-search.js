@@ -9,15 +9,19 @@ const {postgres_connect} = require('/server/lib/postgres-connect.js')
 
 
 async function search_v1(cmd) {
-  const verbose =1;
+  const verbose =0;
   db = db || await postgres_connect();
 
   console.log(`deep-search@7 `,{cmd})
-  let {vpath, query} = cmd;
-  console.log(`@13: `,{vpath})
+  let {path:vpath, query} = cmd;
+  console.log(`@13 search_v1`,{vpath},{query})
   const vdico = nspell.vdico();
   //console.log(`nspell.vdico:`,vdico);
 
+  if (!query) {
+    console.log(`@22 search_v1 <${query}>@<${vpath}>`,{cmd})
+    throw 'fatal@22 no-query'
+  }
   query = query.replace(/"/g,' ')
   const audit = [];
 
@@ -122,6 +126,13 @@ async function search_v1(cmd) {
 
 Meteor.methods({
   'deep-search': (cmd) =>{
+    const {query,path} = cmd;
+    if (!query || !path) {
+      return {
+        error: 'Incorrect parameters',
+        params:cmd
+      }
+    }
     return search_v1(cmd);
   }
 })

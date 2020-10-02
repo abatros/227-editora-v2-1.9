@@ -48,7 +48,26 @@
     </div>
 
     {{else}}
-    <p style="line-height:30px; height:100px; border:0px dashed orange; margin-top:50px;">{{{err_message.get}}}</p>
+    <p style="text-align:center;line-height:30px; height:100px; border:0px dashed orange; margin-top:50px;">
+      {{{err_message.get}}}
+    </p>
+    {{#if session 'mode-sign-up'}}
+    <form class="js-userCode" name="form1">
+      <div class="vbox"
+      style="margin:0px 0 0 0; height:400px; justify-content:space-evenly;
+      padding:10px 100px 100px 100px;
+      background-color: yellow;
+      align-items:center;
+      ">
+        Enter your one time code
+        <input type="text" name="userCode" style="width:200px;font-size: 18pt;padding:5px 10px;">
+        <button type="submit" >Submit</button>
+        <!--
+        <button type="button" name="button2" style="font-size: 12pt;">or continue in demo mode</button>
+        -->
+      </div>
+    </form>
+    {{else}}
     <form class="js-userId" name="form1">
       <div class="vbox"
       style="margin:0px 0 0 0; height:400px; justify-content:space-evenly;
@@ -62,8 +81,11 @@
         <!--
         <button type="button" name="button2" style="font-size: 12pt;">or continue in demo mode</button>
         -->
+        <h5 style="margin:0;">Not registered yet ?</h5>
+        <button type="button" class="js-sign-up" name="sign-up" style="font-size: 12pt;">sign-up</button>
       </div>
     </form>
+    {{/if}}
     {{/if}}
   </vbox>
 

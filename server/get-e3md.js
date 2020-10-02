@@ -193,7 +193,7 @@ function init(www_root) {
     const json = yaml.safeLoad(fs.readFileSync(fn,'utf8'))
     let vpath = json.path;
     if (!vpath) {
-      console.log(`@191: fn <${fn}>`)
+      //console.log(`@191: fn <${fn}>`)
       const {dir} = path.parse(fn);
       vpath = dir.substring(dir.lastIndexOf('/')+1);
     }
@@ -859,7 +859,7 @@ const template_fn = 's3://blueink/ya14/blueink-page-template-v4.html';
 
 async function commit_s3data (cmd) {
   throw 'Obsolete';
-  
+
   const {s3fpath, data} = cmd;
 
 

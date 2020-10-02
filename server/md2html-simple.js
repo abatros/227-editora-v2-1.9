@@ -14,15 +14,16 @@ function fix_yaml(data) { // NO.
 }
 
 function md2html(data) {
-  console.log(`@17: md2html data:`,data)
+  const verbose =0;
+  ;(verbose >0) && console.log(`@17 md2html data:`,data)
   data = fix_yaml(data);
-  console.log(`@19: md2html data:`,data)
+  ;(verbose >0) && console.log(`@19 md2html data:`,data)
   const v = data.trim().split(/\-\-\-/g); //match(yamlBlockPattern);
   assert(!v[0])
   assert(v.length == 3)
 
-  console.log(`@22: md2html `,v[1]);
-  console.log(`@23: md2html `,v[2]);
+  ;(verbose >0) && console.log(`@22 md2html `,v[1]);
+  ;(verbose >0) && console.log(`@23 md2html `,v[2]);
 
   var json = yaml.safeLoad(v[1], 'utf8');
 

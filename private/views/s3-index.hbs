@@ -1,0 +1,25 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta content="text/html" http-equiv="Content-Type">
+</head>
+
+<body>
+<h2>
+  index-catalogs
+</h2>
+
+{{#each data}}
+
+<div class="">
+  [ {{this.iSeq}} ]
+  <a href="https://ultimheat.com/s3-museum/{{this.xid}}">
+    {{this.yp}}-{{this.title_}}
+  </a>
+</div>
+
+{{/each}}
+
+</body>
+</html>

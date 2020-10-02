@@ -3,7 +3,7 @@ const path = require('path')
 const assert = require('assert');
 const yaml = require('js-yaml')
 
-import {parse_s3filename} from '/shared/utils.js'
+import {parse_s3filename, extract_metadata} from '/shared/utils.js'
 import './edit-article.html'
 import './edit-panel.js'
 // import './preview-panel.js'
@@ -34,7 +34,7 @@ import {s3parser} from '/shared/utils.js'
 
 
 
-function commit_article(tp) {
+function commit_article_Obsolete(tp) {
   console.log(`@22 commit-article s3fpath:`, tp.s3fpath)
   //  console.log(`@206 commit-article meta:`, tp.meta)
   tp.set_status_light('status-busy')
@@ -78,7 +78,8 @@ TP.onCreated(function(){
   const tp = this;
   etime = new Date().getTime();
   const etime_ = new Date().getTime();
-  console.log(`@18: Meteor.connection `,Meteor.connection)
+//  console.log(`@18: Meteor.connection `,Meteor.connection)
+  //console.log(`@82 edit-article.onCreated cflag:${tp.data.flags()}`)
   /*
         async : get MD file associated with this article.
         wait onRendered to initialize codeMirror.
@@ -100,6 +101,13 @@ TP.onCreated(function(){
 TP.onRendered(function() {
   const tp = this;
   const etime_ = new Date().getTime();
+})
+
+TP.helpers({
+  flags: ()=>{
+    const tp = Template.instance();
+    return tp.data && tp.data.flags()
+  }
 })
 
 
@@ -309,10 +317,11 @@ FlowRouter.route('/edit', { name: 'edit-article',
     }
   ],
   action: function(params, queryParams){
+    const verbose =1;
     console.log('Router::action for: ', FlowRouter.getRouteName());
-    console.log(' --- params:',params);
+    ;(verbose >0) && console.log(' --- params:',params);
     document.title = "editora-v2";
-    console.log(`@210: host:`,location.host)
+    ;(verbose >0) && console.log(`@210: host:`,location.host)
     const {host} = location;
 //    const web_page = Session.get('web-page');
     /*
@@ -323,7 +332,7 @@ FlowRouter.route('/edit', { name: 'edit-article',
     } */
 //    Session.set('article-id',params.article_id)
 //    console.log(`html-page already set:`,Session.get('web-page'))
-    console.log(`render data:`,Object.assign(params,queryParams))
+    ;(verbose >0) && console.log(`render data:`,Object.assign(params,queryParams))
 //    BlazeLayout.render('edit_article',Object.assign(params,queryParams,{xid:queryParams.xid}));
 
     const {s3, workspace, w3} = queryParams; // full Key for md-file
@@ -332,32 +341,30 @@ FlowRouter.route('/edit', { name: 'edit-article',
 
     if (s3) {
       // WE EXPECT A MD-file.
+      // ex: /edit?s3=abatros/projects/227-editora-v2.md
+      // this /edit?s3=abatros/projects/227-editora-v2[/]
+      //    => will redirect to directory-panel
+
       // DO NOT SHOW RIGHT PANEL
-      // if (index.md) is missing add-it.
       // in the edit-panel, if <s3-url>.index.md does not exists => we will open the directory.
 
-      let {s3:s3fn, flags:flags_} = capture_options(s3);
-      console.log(`@553 `,{flags},{s3fn})
-
-      /*
-        the only case we add 'index.md'
-      */
+      let {s3:s3fn, flags:flags_} = capture_options(s3); // --force
+      ;(verbose >0) && console.log(`@553 `,{flags},{s3fn})
 
       const {Bucket,Key,subsite,xid,base,ext} = parse_s3filename(s3fn)
       if (!ext) {
-        // assume the user forgott (index.md)
-        s3_url = path.join(Bucket,Key,'index.md');
-        //const w3 = path.join(Bucket,Key)
-        Session.set('s3-url', s3_url);
-        BlazeLayout.render('edit_article', {flags, s3_url, flags});
+        // we infer it's a directory.
+        s3fn = path.join(Bucket,Key)+'/';
+        Session.set('workspace', s3fn);
+        BlazeLayout.render('edit_article', {flags});
         return;
-      } else {
-        s3_url = path.join(Bucket, Key)
-//        Session.set('workspace', path.join(Bucket,subsite,xid));
       }
+
+      s3_url = path.join(Bucket, Key)
       flags = flags_;
       Session.set('s3-url', s3_url) // this is the requested object-file
 //      Session.set('showing-right-panel',false);
+      BlazeLayout.render('edit_article', {flags, s3_url, flags});
       } // s3
 
     else if (workspace || w3) {

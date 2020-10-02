@@ -4,54 +4,8 @@ import utils from '/shared/utils.js'
 import {s3fix} from '/shared/utils.js'
 const path = require('path')
 const yaml = require('js-yaml')
-const {parse_s3filename} = require('/shared/utils.js')
+const {parse_s3filename, extract_metadata} = require('/shared/utils.js')
 const TP = Template.edit_panel;
-
-// ---------------------------------------------------------------------------
-/*
-      Current document must stay in the cache.
-*/
-
-//const codeMirror_Value = new ReactiveVar();
-
-Tracker.autorun(function(){
-  let s3fn = Session.get('s3-url')
-  if (!s3fn) return;
-
-  const VersionId = Session.get('VersionId')
-  console.log(`>>> edit-panel Tracker.autorun: <${s3fn}> VersionId:[${VersionId}]`)
-//  get_s3Object(tp, s3fn, VersionId, force); // THIS WILL INSTALL DATA IN CODE MIRROR.
-  const {Bucket, Key, subsite, xid, base, ext} = parse_s3filename(s3fn);
-  if (!ext) {
-    console.error(`ALERT this is not a MD-file <${s3fn}> fixing...`)
-    s3fn = path.join(s3fn,'index.md')
-  }
-
-  Meteor.call('get-s3object',s3fn,(err, data)=>{
-    if (err) {
-      console.error(`@30 `,{err})
-      return;
-    }
-    if (!data) {
-      console.error(`@34 missing-data`); // bad
-      return;
-    }
-    if (data.error) {
-      console.error(`@38 get-s3object(${s3fn}) => `,data.error);
-      // try a directory.
-      Session.set('workspace',Session.get('s3-url')) // the original.
-      Session.set('showing-right-panel',true)
-      Session.set('showing-directory-panel',true)
-      Session.set('s3-url',null); // to close left-panel
-      // this will activate directory-panel
-      return;
-    }
-    console.log(`@37 data for codeMirror is ready.`,{data})
-    const {Bucket,Key,LastModified,etime, data:cm_Value} = data;
-//    codeMirror_Value.set(cm_Value)
-    Session.set('code-mirror-data',cm_Value)
-  })
-});
 
 
 
@@ -61,11 +15,15 @@ TP.onCreated(function() {
   const tp = this;
   tp.etime_ = new Date().getTime()
   tp.status_message = new ReactiveVar() // not in onRendered.
+  // console.log(`@64 edit-panel.onCreated flags:`, tp.data.flags);
+  console.log(`Meteor.isTest:${Meteor.isTest}`)
 })
 
 
 TP.onRendered(function() {
   const tp = this;
+  //console.log(`@74 edit-panel.onCreated flags:`, tp.data.flags);
+
   const cm_TextArea = tp.find('#cm_TextArea'); //document.getElementById('myText');
   tp.cm = install_codeMirror(tp);
   //const force = FlowRouter.;
@@ -80,7 +38,7 @@ TP.onRendered(function() {
   })
 
   //console.log(`15 `,{cm_TextArea})
-  console.log(`@14 edit_panel.onRendered -done- [${new Date().getTime() - tp.etime_} ms]`)
+  //console.log(`@14 edit_panel.onRendered -done- [${new Date().getTime() - tp.etime_} ms]`)
 
   // moved to created tp.status_message = new ReactiveVar()
   const status_lights = tp.findAll('span.js-status-light')
@@ -108,19 +66,20 @@ TP.helpers({
 })
 
 function s3fn_to_workspace(s3fn) {
-  const {Bucket, Key, subsite, xid, base, ext} =  parse_s3filename(s3fn);
-  console.log(`@112 `,Bucket, Key, subsite, xid, base, ext)
-  if (ext && base && (base == 'index.md')) {
-    const {dir} = path.parse(Key); // move-up 1 step to remove (index.md)
-    const {dir:dir2} = path.parse(dir); // move-up 1 step to remove (index.md)
-    const s3dir = path.join(Bucket,dir2);
+  const {Bucket, Key, ext} =  parse_s3filename(s3fn);
+  if (ext == '.md') {
+    // because /caltek/books/my-book/chapter-1.md
+    const {dir:subsite, name:xid} = path.parse(Key);
+    console.log({subsite},{xid})
+    const s3dir = path.join(Bucket,subsite);
 //    console.log(`@303 set workspace:<${s3dir}>`)
     return s3dir;
   }
 
-
-  throw `@122 s3fn_to_workspace(${s3fn})`;
-  return s3fn
+  // here ex: /publibase/users/123876.yaml
+  const {dir:subsite} = path.parse(Key);
+  const s3dir = path.join(Bucket,subsite);
+  return s3dir;
 }
 
 
@@ -143,6 +102,7 @@ TP.events({
     e.preventDefault(); // to avoid tailing #
     console.log('js-update')
     const s3_url = Session.get('s3-url')
+    assert(s3_url, 'Missing s3-url@147')
     publish_article(tp, s3_url); // save, mk-html, mk-ts-vector
   },/*
   'click .js-directory': (e,tp)=>{
@@ -166,8 +126,8 @@ TP.events({
 function install_codeMirror(tp) {
   const cm_TextArea = tp.find('#cm_TextArea'); //document.getElementById('myText');
 
-  console.log({cm_TextArea})
-  console.log(`Template.edit_panel.onRendered.data:`,tp.data)
+  //console.log({cm_TextArea})
+  //console.log(`Template.edit_panel.onRendered.data:`,tp.data)
   // configure codeMirror for this app-key
   const cm = CodeMirror.fromTextArea(cm_TextArea, {
 //      mode: "javascript",
@@ -388,16 +348,40 @@ function publish_article(tp, s3_url) {
   const verbose =0;
   tp.set_status_light('status-busy')
 
-  s3_url = s3_url || tp.s3_url;
+  s3_url = s3_url || Session.get('s3-url');
+  assert(s3_url, 'Missing u3-url@393')
 
-  Meteor.call('publish-s3data', {
+  const {meta, md} = extract_metadata(tp.cm.getValue())
+
+  if (meta) {
+    Object.assign(meta,{
+      _userId: Session.get('userId'),
+      _revisionDate: new Date()
+    })
+  }
+
+  //console.log({meta})
+
+
+  const data = (meta)? `---\n${yaml.dump(meta)}---${md}\n`:md;
+
+  const params = {
     s3_url: s3_url, // must be full Key for md-file.
     update:true,
-    data:tp.cm.getValue()}, (err,data)=>{
+    data
+  }
+
+   //console.log({params});
+
+
+
+  Meteor.call('publish-s3data', params, (err,data)=>{
       if (err) {
         tp.set_status_light('status-red')
-        tp.status_message.set(`${err.error} - ${err.details}`)
-        throw err; // do things on tp, according to results.
+        console.error(`@442 [${module.id}] err=>`, err)
+        tp.status_message.set(err.message);
+//        throw err; // do things on tp, according to results.
+        return;
       }
 
       if (data.error) {
@@ -408,6 +392,10 @@ function publish_article(tp, s3_url) {
 
       tp.set_status_light('status-ok')
       tp.status_message.set('commit Ok.')
+      if (meta) {
+        Session.set('last-revision-date',meta._revisionDate.toLocaleString())
+        Session.set('last-revision-author',meta._userId);
+      }
       return;
     }
   )

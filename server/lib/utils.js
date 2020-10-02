@@ -80,7 +80,7 @@ module.exports.absolute_path = function (fname) {
 module.exports.get_yaml_object = get_yaml_object;
 
 async function get_yaml_object (s3path) {
-  const verbose =1;
+  const verbose =0;
 
   ;(verbose >0) && console.log(`@426 Entering get_yaml_object(${s3path})`)
 
@@ -101,7 +101,7 @@ async function get_yaml_object (s3path) {
 
   const retv2 = await s3.getObject({Bucket, Key})
   if (retv2.error) {
-    console.log(`@341 error.code:${retv2.error.code}
+    console.log(`@104 [${module.id}] get-yaml error.code:${retv2.error.code}
       error.statusCode :${retv2.error.statusCode}
       Bucket:<${Bucket}>
       Key:<${Key}>
@@ -140,6 +140,7 @@ const cache_publish = {
 
 module.exports.setCustom = function (format) {
   if (format.startsWith('s3://')) {
+    throw 'break@142 setCustom'
     /****************
     find parent directory
     *****************/
@@ -199,17 +200,32 @@ module.exports.read_directory = async function (fpath) {
 // ---------------------------------------------------------------------
 
 module.exports.compile_template = async function(template_fn) {
-  assert(template_fn.startsWith('s3://'))
+  const verbose =0;
+
+//  if (template_fn.startsWith('s3://')) template_fn = template_fn.substring(5);
 
   const {Bucket, Key} = parse_s3filename(template_fn)
 //  's3://blueink/ya13/blueink-page-template-v4.html')
+  if (!Bucket || !Key) {
+    console.error(`@210 compile_template(${template_fn}) =><${Bucket}><${Key}>`)
+    throw `fatal@210 missing-key`
+  }
+
+
   const o1 = await s3.getObject({Bucket, Key});
   if (!o1.Body) {
-    console.log(`@38 failed to fetch template <${template_fn}>`,{o1})
+    console.log(`@38 [${module.id}] failed to fetch template <${template_fn}>`,{o1})
+    throw new Meteor.Error(`failed to fetch template <${template_fn}>`,'file-not-found @compile-template')
   }
   const template = o1.Body.toString('utf8')
+  ;(verbose >0) && console.log(`@215 template :
+    ---------------------
+    ${template}
+    ---------------------
+    `)
+
   const compiled_template = hb.compile(template);
-  console.log(`@42 template <${template_fn}> compiled`)
+  ;(verbose >0) && console.log(`@42 template <${template_fn}> compiled`)
   return compiled_template
 };
 
@@ -296,8 +312,8 @@ module.exports.putObject(s3path, data) {
 
 */
 
-module.exports.putObject = async function (cmd) {
-  const verbose =1;
+ async function putObject_Obsolete(cmd) {
+  const verbose =0;
 
   let {s3_url, data:Body} = cmd
   const {host, pathname, xid} = cmd
@@ -405,12 +421,12 @@ async function fix_folder_v2(s3fn) {
     const {dir,base} = path.parse(li.Prefix);
     const new_Key = dir+'.md';
     console.log(`- move object <${Bucket}> <${li.Prefix}> to <${new_Key}>`)
-    const retv1 = await s3.copyObject({
+    const retv1 = await s3.moveObject({
       CopySource: `/${Bucket}/${li.Prefix}`,
       Bucket,
       Key: new_Key,
       ContentType: 'text/plain',
-      ACL: 'public-read'
+      ACL: 'public-read',
     })
     console.log(`@415 copyObjectResult =>`,retv1.CopyObjectResult)
 
@@ -422,3 +438,131 @@ async function fix_folder_v2(s3fn) {
 
   }
 }
+
+
+// --------------------------------------------------------------------------
+
+module.exports.fix_md_mime_type = fix_md_mime_type;
+
+async function fix_md_mime_type(s3fn) {
+  /*
+      - readdir
+      - for each (index.md) file
+          - write the same without extension
+  */
+
+  const {Bucket,Key} = parse_s3filename(s3fn)
+
+  const retv = await s3.readdir_nofix({
+    Bucket,
+    Prefix: Key,
+    Delimiter: '.md'
+  });
+  //  console.log(`@357 readdir =>`,retv.CommonPrefixes)
+
+//  const list = retv.CommonPrefixes.filter(it => (it.Prefix && it.Prefix.endsWith('/index.md')));
+  const list = retv.CommonPrefixes.filter(it => (it.Prefix));
+  let iCount =0;
+  //  console.log(`@358 readdir =>`,list)
+  for (li of list) {
+    const {dir,base} = path.parse(li.Prefix);
+    console.log(`- modify header <${Bucket}> <${li.Prefix}>`)
+
+    // copy on itself.
+    const retv1 = await s3.copyObject({
+      CopySource: `/${Bucket}/${li.Prefix}`,
+      Bucket,
+      Key: li.Prefix,
+      ContentType: 'text/plain',
+      ACL: 'public-read',
+      MetadataDirective: 'REPLACE',
+    })
+    console.log(`@415 copyObjectResult =>`,retv1.CopyObjectResult)
+    //if (iCount>10) break;
+    iCount++
+  }
+}
+
+// --------------------------------------------------------------------------
+
+module.exports.migration_v1 = migration_v1;
+
+async function migration_v1(s3fn_from, s3fn_to) {
+  /*
+      - readdir
+      - for each (index.md) file
+          - write the same without extension
+          - move html, jpg and pdf
+  */
+
+  const {Bucket,Key} = parse_s3filename(s3fn_from)
+  const {Bucket:Bucket_, Key:Key_} = parse_s3filename(s3fn_to)
+
+  const retv = await s3.readdir_nofix({
+    Bucket,
+    Prefix: Key,
+    Delimiter: '.md'
+  });
+  //  console.log(`@357 readdir =>`,retv.CommonPrefixes)
+
+//  const list = retv.CommonPrefixes.filter(it => (it.Prefix && it.Prefix.endsWith('/index.md')));
+  const list = retv.CommonPrefixes.filter(it => (it.Prefix));
+  let iCount =0;
+  //  console.log(`@358 readdir =>`,list)
+  for (li of list) {
+    const {dir,base,name} = path.parse(li.Prefix);
+    if (base !== 'index.md') continue;
+    iCount++
+
+    console.log(`- processing <${Bucket}> <${dir}>`)
+    const {Contents, Keys} = await s3.readdir_nofix({Bucket,Prefix:dir})
+//    console.log({retv})
+    for (it of Keys) {
+      const {dir,base,ext} = path.parse(it)
+      const {base:xid} = path.parse(dir)
+      switch(ext) {
+        case '.pdf':
+        case '.jpg':
+        case '.html':
+        const from = path.join(Bucket,dir,base);
+        const dest = path.join(Bucket_,Key_,xid,base);
+        console.log(`  -- copyObject <s3://${from}> <s3://${dest}>`)
+        const {ETag, LastModified} = await s3.copyObject({
+          CopySource: from,
+          Bucket: Bucket_,
+          Key: path.join(Key_,xid,base),
+          ACL: 'public-read',
+          // ContentType
+        })
+        console.log(`     ETag: [${ETag}]`)
+        break;
+
+        case '.md':
+        if (base == 'index.md') {
+          const from = path.join(Bucket,dir,base);
+          const dest = path.join(Bucket_,Key_,xid)+'.md';
+          console.log(`  -- copyObject <s3://${from}> <s3://${dest}>`)
+          const {ETag, LastModified} = await s3.copyObject({
+              CopySource: from,
+              Bucket: Bucket_,
+              Key: path.join(Key_,xid)+'.md',
+              ACL: 'public-read',
+              ContentType: 'text/plain;charset=utf8',
+              ContentEncoding: 'utf8',
+              MetadataDirective: 'REPLACE',
+//              Metadata: {
+//                'content-type':''
+//              }
+            })
+          console.log(`     ETag: [${ETag}]`)
+          break;
+        }
+
+        default:
+        // console.log(`  -- IGNORED: <${base}>`)
+      }
+    } // Keys
+    // if (iCount>=4) break;
+  } // list
+  console.log(`found ${iCount} folders.`)
+} // migration_v1

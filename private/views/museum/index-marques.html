@@ -1,0 +1,180 @@
+<head>
+<meta charset="utf-8">
+<meta content="text/html" http-equiv="Content-Type">
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+
+<script type="text/javascript">
+  const requestURL = 'http://museum.us-east-1.linodeobjects.com/index-marques.json';
+  const request = new XMLHttpRequest();
+  request.open('GET', requestURL);
+  request.responseType = 'json'; // that does JSON.parse
+  request.send();
+  request.onload = function() {
+    let index = request.response;
+    console.log(`@22 index.length:`,index.length)
+
+    var template = $("#template-marques").html();
+    console.log(`@30 found template length:${template.length}`)
+    const compiledCode = Handlebars.compile(template);
+
+    index.sort((a,b)=>{
+      return a.marque.localeCompare(b.marque)
+    })
+
+    console.log({index})
+
+    var result = compiledCode({index_marques:index});
+    $("#content").html(result);
+  }
+</script>
+
+
+
+  <style>
+    .red {color:red;}
+    .green {color:green;}
+    #index-marques span.yp {
+      font-family: helvetica;
+      font-size:9pt;
+      font-weight:bold;
+    }
+    a {
+      text-decoration: none;
+      color: black;
+    }
+  </style>
+</head>
+
+<body>
+
+
+
+<h2>Index des Marques</h2>
+<h3>revision Sept 30, 2020</h3>
+
+<div id="content"></div>
+
+
+<script id="template-marques" type="text/x-handlebars-template">
+  {{#each index_marques}}
+
+  <div>
+    <div style="margin:5px 0 0 0; border-bottom:3px solid rgb(230,230,230);padding:0 0 10px 0;font-family:times;">
+      <b>Marque :</b><br>
+      <b style="font-weight:bold; font-family:arial; color:brown;">{{{this.marque}}}</b>
+      <br>
+      <div style="margin:5px 0 0 20px;">
+        <b>Cité dans le(s) document(s) suivant(s)</b>
+        {{#each titres}}
+          <div style="margin:8px 0 0 0px;">
+            <span class="yp">({{this.yp}})</span>
+            <a href="./page/{{title.xid}}" target="_blank">
+              <b style="font-family:arial; font-size:11pt;">{{this.title}}</b></a>
+            <span style="font-size:9pt;">
+              {{#if restricted}}
+              <span class="red">Restricted</span>{{/if}}
+              {{#if transcription}}
+              <span class="green">Transcription</span>{{/if}}
+            </span>
+
+
+
+            {{#if restricted}}
+            <div style="margin:0 0 0 0px;" class="red">
+              &rarr; Document  sous droits d'auteur, non communicable.
+            </div>
+            {{else}}
+            <div style="margin:0px 0 0 0px;">
+              {{#each links}}
+              <div>
+                &diams;
+
+                <div style="display:inline-block">
+                  <a href='https://ultimheat.com/s3-museum/{{fn}}.pdf'
+                    target="anotherTab">
+                    {{fn}}.pdf
+                  </a>
+                </div>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      </div>
+    </div>
+    <div style="display:table-cell;padding-left:10px;display:none;">
+      {{au.latest_auteur}}
+    </div>
+  </div>
+  {{/each}}
+</script>
+
+
+<script id="main2-template" type="text/x-handlebars-template">
+<div id="index-marques" style="margin:0 0 0 20px;">
+    <h3>Index des marques</h3>
+    <div style="border:0px solid black; margin:5px; padding:2px;">
+    {{wait_message}}
+    {{!--
+    <input type="text" id="find-auteurs-input" style="height:20px; width:100%;">
+    --}}
+  </div>
+  {{#each it in marques}}
+  <div>
+    <div style="margin:5px 0 0 0; border-bottom:3px solid rgb(230,230,230);padding:0 0 10px 0;font-family:times;">
+      <b>Marque :</b><br>
+      <a href="/auteur/{{au.auteurName}}">{{{it.marque}}}</a><br>
+      <div style="margin:5px 0 0 20px;">
+        <b>Cité dans le(s) document(s) suivant(s)</b>
+        {{#each title in it.titres}}
+          <div style="margin:4px 0 0 0px;">
+            <span class="yp">({{title.yp}})</span>
+            <a href="./page/{{title.xid}}" target="_blank">{{title.title}}</a>
+            <span style="font-size:9pt;">
+              {{#if title.restricted}}
+              <span class="red">Restricted</span>{{/if}}
+              {{#if title.transcription}}
+              <span class="green">Transcription</span>{{/if}}
+            </span>
+
+
+
+            {{#if title.restricted}}
+            <div style="margin:0 0 0 0px;" class="red">
+              &rarr; Document  sous droits d'auteur, non communicable.
+            </div>
+            {{else}}
+            <div style="margin:0 0 0 0px;">
+              {{#each pdf in title.links}}
+              <div>
+                &rarr;
+
+                <div style="display:inline-block">
+                  <a href='https://ultimheat.com/s3-museum/{{pdf.fn}}.pdf'
+                    target="anotherTab">
+                    {{pdf.fn2}}
+                  </a>
+                </div>
+
+                (pdf)
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      </div>
+    </div>
+    <div style="display:table-cell;padding-left:10px;display:none;">
+      {{au.latest_auteur}}
+    </div>
+  </div>
+  {{/each}}
+</script>
+
+</body>

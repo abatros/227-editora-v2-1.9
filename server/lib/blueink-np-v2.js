@@ -155,13 +155,14 @@ async function commit_ts_vector(cmd) {
 
 
 function scan_e3live_data(html) {
+  const verbose =0;
 
   const $ = cheerio.load(html)
   const meta_tags = utils.get_meta_tags($)
 //  console.log({head_meta})
   if (! meta_tags['xid']) {
     console.log(`ALERT e3live.xid is missing, skipping.`)
-    console.log(`@164 `,{meta_tags})
+    //console.log(`@164 `,{meta_tags})
 //    return {};
   }
   // console.log(`@158 html.length:${html.length}`,{meta_tags})
@@ -175,6 +176,8 @@ function scan_e3live_data(html) {
   const raw_text = en.split(/\r?\n/).join(' ').replace(/\s+/,' ')
   return {meta_tags, raw_text};
 }
+
+// -------------------------------------------------------------------------
 
 function mk_h1_html_Obsolete(xid,h1) {
   return `<div class="h1-deeps-item">
@@ -233,16 +236,20 @@ function dir_Name(o_path) {
 //       const {html} = await mk_html({meta,md,s3fpath, subsite,template_fn})
 
 async function mk_html_v2(p1) {
-  const verbose =1;
+  const verbose =0;
 
   if (typeof p1 === 'string') {
     throw "Invalid parameter for mk_html"
   }
-  console.log({p1})
+  ;(verbose >0) && console.log(`@241 [${module.id}]`,{p1})
   const {meta,
     md,
     subsite = '/',      // from o__path s3://blueink/ya14  => ex: "ya14"
-    template_fn } = p1;
+    template_fn,
+    s3_url, // for md-file
+  } = p1;
+
+  assert(s3_url.endsWith('.md'), `[${module.id}] fatal@252`);
 
   // split en/th
   const [md_en, md_th] = md.split('\\th')
@@ -265,41 +272,37 @@ async function mk_html_v2(p1) {
 
   const {shortId, img:meta_img, pdf:meta_pdf, ori, sku} = meta;
 
-  /******************
-  specific blueink-np
 
-    pdfName from md-file has no prefix
-    pdf is in folder /<subsite>/<xid>/<pdf> ex: /ya14/1202-Y2K3/abc.pdf
-    {{subsite}} will be used in template
-    {{href_prefix}} will be used before pdf and jpeg name.
-        default to {{subsite}}
+  // (1) s3://blueink/ya14/1202-Y3K2.md
+  // (2) s3://blueink/ya14/1202-Y3K2/xxxxxxxxxxx.pdf
+  // we need ya14/1202-Y3K2 from Key
 
-    blueink href : always relative to subsite
+  const {Key,ext} = parse_s3filename(s3_url)
+  assert((ext == '.md'), `[${module.id}] fatal@281`);
+  // Key: ya14/1202-Y3K2.md
 
-  *******************/
-
-  const {xid} = meta;
-  assert (xid.length > 6)
+  const {dir,base,name:xid} = path.parse(Key)
+  // dir: ya14
+  // base: 1202-Y3K2.md
+  // name: 1202-Y3K2
 
   const o = {
-    xid, // dirName !!!! full xid.
-    sku,
+    xid,
     ori,
     subsite, // https://ultimheat.co.th/<subsite>
     template_fn,
     shortId,
     meta_img,
     meta_pdf,
-    /*
-    pdf: '/'+path.join(subsite,meta.pdf), // this is blueink-logic specific.
-    pic: '/'+path.join(subsite,meta.img), //
-    */
-    pdf: meta.pdf,
-    pic: meta.img,
-    en_html, th_html
+    pdf: path.join(dir,xid,meta.pdf),
+    pic: path.join(dir,xid,meta.img),
   }
 
-  console.log(`@309 :`, {o})
+  ;(verbose >0) && console.log(`@300 [${module.id}] about to compile o:`,o)
+
+  Object.assign(o, {
+    en_html, th_html
+  })
 
 
   const html = cache_template.compiled(o);
@@ -313,7 +316,7 @@ async function mk_html_v2(p1) {
 //       const {html} = await mk_html({meta,md,s3fpath, subsite,template_fn})
 
 async function mk_html(p1) {
-  const verbose =1;
+  const verbose =0;
 
   if (typeof p1 === 'string') {
     throw "Invalid parameter for mk_html"
@@ -371,7 +374,7 @@ async function mk_html(p1) {
 // ------------------------------------------------------------------------
 
 function scan_e3live_data_Obsolete(html) {
-  const verbose =1;
+  const verbose =0;
   const o ={};
 
   /*
@@ -416,6 +419,67 @@ function scan_e3live_data_Obsolete(html) {
 
 // -------------------------------------------------------------------------
 
+
+async function mk_index(o_path, index) {
+  if (o_path.endsWith('/')) o_path = o_path.slice(0,-1)
+  console.log(`@424 make_index(${o_path})`,index)
+
+  const ul = index
+  .map((it,j) =>{
+//    const fname = it.Prefix.substring(5).replace('/index.html','');
+    return `<div>${j} <a href="https://ultimheat.co.th/np/${it}">${it}</a></div>`
+  }).join('\n')
+
+
+  //  console.log({ul})
+
+  const {Bucket, Key} = parse_s3filename(o_path)
+
+  const retv = await s3.putObject({
+    Bucket,
+    Key,
+    Body: `<html>\n${ul}</html>`,
+    ACL: 'public-read',
+    ContentType: 'text/html;charset=utf8;',
+    ContentEncoding : 'utf8',
+  })
+
+  console.log(`@391 write_index =>`, Object.assign(retv,{Bucket,Key,o_path}))
+}
+
+function mk_index1({xid, html}) {
+  const verbose =0;
+//  const {en,th,'meta.pdf':pdf, 'meta.img':img, meta} = scan_e3live_data(html)
+
+  const retv1 = scan_e3live_data(html)
+  console.log(`@233 `,{retv1})
+  if (!retv1) {
+    console.log(`@239 ALERT `,{html})
+    return;
+  }
+  const {article, meta_tags} = retv1;
+  if (article == undefined) {
+    console.log(`@244 xid:<${xid}>\n`,{article},{meta_tags})
+    throw 'break@245'
+  }
+
+  ;(verbose >0) && console.log(`@273 `,{meta_tags})
+  ;(verbose >0) && console.log(`@274 `,{article})
+
+  ;(xid != meta_tags.xid) && console.log(`ALERT meta_tags.xid:${meta_tags.xid} does not match.
+    ANYWAY: meta_tags.xid is irrelevant
+    `,{xid})
+
+  // get h1
+
+  return {irow: `<div><a href="/yellow/${xid}/index.html">${xid}</a>${meta_tags.h1}</div>`};
+}
+
+
+
+
+// -------------------------------------------------------------------------
+
 // keep this way : like a directory (TOC) avoid search.
 
 module.exports = {
@@ -426,4 +490,5 @@ module.exports = {
   deeps_headline,
 //  mk_h1_html,
   mk_html: mk_html_v2,
+  mk_index,
 }

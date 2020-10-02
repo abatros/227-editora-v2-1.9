@@ -9,13 +9,17 @@ function parse_s3filename(s3fn) {
 
   // remove protocol if present.
   if (s3fn.startsWith('s3://')) s3fn = s3fn.substring(5);
+  if (s3fn.startsWith('s3:/')) {
+    console.error(`@13 parse_s3filename(${s3fn}) FIXED`)
+    s3fn = s3fn.substring(4);
+  }
 
   ;(verbose >0) && console.log(`@13 >>>> `,{s3fn})
 
   const _v = s3fn.split('/');
   const Bucket = _v.splice(0,1)[0];
   const Key = _v.join('/');
-  console.log(`@16 _v.len:${_v.length} `,{_v})
+  ;(verbose >0) && console.log(`@16 _v.len:${_v.length} `,{_v})
 
   const {dir, base, name, ext} = path.parse(Key);
 
@@ -23,30 +27,50 @@ function parse_s3filename(s3fn) {
   if (ext)
     {
     // ex: blueink/ya14/1202-Y2K3/index.md
+    // ex: blueink/ya14/1202-Y2K3/index.html
+    // ex: blueink/ya14/1202-Y2K3.md
 //    const {dir:dir1, base} = path.parse(s3fn);
     // here: dir: blueink/ya14/1202-Y2K3
     // remove Bucket
-    _v.splice(-1,1); // remove base
-    let xid = _v.splice(-1,1)[0];
-    let subsite = _v.join('/')
-//    const {dir:dir2, base:xid} = path.parse(dir);
-    // xid: 1202-Y2K3 - dir2: blueink/ya14
-    // remove
-//    const subsite = dir2.split('/').slice(1).join('/');
-//    const {dir:} = path.parse(dir2)
 
-    if (!subsite) {
-      subsite = xid; xid=''; //swap
-    }
+    if (base == 'index.md') {
+      // old style
 
-    const retv = {
-      s3fn,
-      Bucket, Key,
-//      Key: path.join(subsite,xid,base),
-      subsite, xid, base, ext
+      _v.splice(-1,1); // remove base
+      let xid = _v.splice(-1,1)[0];
+      let subsite = _v.join('/')
+  //    const {dir:dir2, base:xid} = path.parse(dir);
+      // xid: 1202-Y2K3 - dir2: blueink/ya14
+      // remove
+  //    const subsite = dir2.split('/').slice(1).join('/');
+  //    const {dir:} = path.parse(dir2)
+
+      if (!subsite) {
+        subsite = xid; xid=''; //swap
+      }
+
+      const retv = {
+        s3fn,
+        Bucket, Key,
+  //      Key: path.join(subsite,xid,base),
+        subsite, xid, base, ext
+      }
+      ;(verbose >0) && console.log(`@30 `,{retv})
+      return retv;
+    } else {
+      // new style:
+      // ex: blueink/ya14/1202-Y2K3.md
+      assert((base != 'index.md'), `fatal@59 [${module.id}] s3fn <${s3fn}>`);
+      const retv = {
+        s3fn,
+        Bucket, Key,
+        subsite: dir,
+        xid:name,
+        base, ext
+      }
+      ;(verbose >0) && console.log(`@66 `,{retv})
+      return retv;
     }
-    ;(verbose >0) && console.log(`@30 `,{retv})
-    return retv;
   } // ext
 
 

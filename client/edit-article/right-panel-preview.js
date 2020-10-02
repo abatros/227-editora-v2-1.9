@@ -76,18 +76,6 @@ TP.onRendered(function() {
   // or to give us a template to rebuild html here in the client.
 
 
-
-
-
-  /*
-  Meteor.call('get-s3Object-versions',s3_url,(err,data)=>{
-    if (err) throw err;
-    console.log(`@13 `,{data}) // array
-
-    versions.splice(0,9999)
-    versions.push(...data);
-    console.log(`@22 `,versions.list())
-  }) */
   return;
 }) // on Rendered
 

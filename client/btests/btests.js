@@ -137,7 +137,7 @@ async function s3_deleteObject(s3fn) {
     //return s3_deleteObjects(s3fn)
   }
   return new Promise((resolve,reject) =>{
-    Meteor.call('delete-object',s3fn, (err,data)=>{
+    Meteor.call('delete-s3object',s3fn, (err,data)=>{
       console.log(`@109 `,{err},{data})
       if (err) throw err;
       resolve(data)

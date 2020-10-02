@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta content="text/html" http-equiv="Content-Type">
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+
+
+  <!--
+  <script type="text/javascript"
+    src="http://us-east-1.linodeobjects.com/museum/index-constructeurs.js">
+  </script>
+  <script type="text/javascript"
+    src="http://us-east-1.linodeobjects.com/museum/index-constructeurs-template.js">
+  </script>
+  -->
+
+  <script type="text/javascript">
+    const requestURL = 'http://museum.us-east-1.linodeobjects.com/index-constructeurs.json';
+    const request = new XMLHttpRequest();
+    request.open('GET', requestURL);
+    request.responseType = 'json';
+    request.send();
+    request.onload = function() {
+      const index_constructeurs = request.response;
+      //console.log({json_data})
+
+      index_constructeurs.forEach(cc =>{
+        if (cc.articles && cc.articles.length>1) {
+          cc.articles.sort((a,b)=>{
+            return ''+a.yp.localeCompare(''+b.yp);
+          })
+        }
+      })
+
+
+      console.log(`@43 `,{index_constructeurs})
+
+      var template = $("#template-constructeurs").html();
+      console.log(`@30 found template length:${template.length}`)
+      compiledCode = Handlebars.compile(template);
+
+      var result = compiledCode({index_constructeurs}); // from index-constructeurs.js
+      $("#content").html(result);
+    }
+  </script>
+
+
+
+  <script>
+
+    $(document).ready(function(){
+    });
+  </script>
+
+  <style>
+    .red {color:red;}
+    .green {color:green;}
+    #index-constructeurs {
+      font-family: times;
+    }
+    #index-constructeurs b {
+      color: rgb(100,100,100)
+    }
+    #index-constructeurs h5 {
+      color: rgb(100,100,100);
+      margin: 3px 0 0 0;
+      padding: 0;
+      font-family: times;
+      font-size: 12pt;
+    }
+    #index-constructeurs span.yp {
+      font-size:9pt;
+      font-weight:bold;
+      font-family: helvetica;
+    }
+    #index-constructeurs span.acronym {
+      font-size:11pt;
+      font-weight: 500;
+      font-family: helvetica;
+    }
+    a {
+      text-decoration:none;
+      color:black;
+    }
+  </style>
+
+
+</head>
+
+<body>
+  <h2 style="margin-bottom:0px;">Index des Constructeurs.</h2>
+  <h5 style="margin:0;">Revision: Sept 30, 2020</h5>
+  <br>
+  <div id="content"></div>
+</body>
+
+<script id="template-constructeurs" type="text/x-handlebars-template">
+{{#each index_constructeurs}}
+<div>
+  <div style="margin:5px 0 0 0; border-bottom:3px solid rgb(230,230,230);padding:0 0 10px 0;">
+    <b>Constructeur :</b>
+    <span style="color:brown; font-weight:bold; font-family: arial;">{{{indexName}}}</span>
+    <div style="margin:5px 0 0 20px;">
+      {{#if voir_legalName}}
+      <div style="margin:3px 0 0 0;">
+        <b>Voir</b> : {{voir_legalName}}
+      </div>
+      {{else}}
+      {{#if aka}}
+      <div>
+        <b>Acronyme(s) :</b>
+        {{#each aka}}
+        [ <span class="acronym">{{this}}</span> ]
+        {{/each}}
+      </div>
+      {{/if}}
+      {{/if}}
+
+      <h5>Document(s) :</h5>
+      {{#each this.articles}}
+        <div style="margin:8px 0 0 0px;">
+           <span class="yp">({{yp}})</span>
+           <a href="page/{{xid}}">
+           <b style="font-family:arial; font-size:11pt;">{{h1}}</b>
+         </a>
+          <span style="font-size:9pt;">
+            {{#if restricted}}
+            <span class="red">Restricted</span>{{/if}}
+            {{#if transcription}}
+            <span class="green">Transcription</span>{{/if}}
+          </span>
+
+
+
+          {{#if restricted}}
+          <div style="margin:0 0 0 0px;" class="red">
+            &rarr; Document  sous droits d'auteur, non communicable.
+          </div>
+          {{else}}
+          <div style="margin:3px 0 0 0px;">
+            {{#each links}}
+            <div>
+              &diams;
+<a href='https://ultimheat.com/s3-museum/{{fn}}.pdf'
+  target="anotherTab">
+  {{fn}}.pdf
+</a>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+  <div style="display:table-cell;padding-left:10px;display:none;">
+    {{latest_auteur}}
+  </div>
+</div>
+{{/each}}
+</div>
+
+</script>
+
+
+</html>

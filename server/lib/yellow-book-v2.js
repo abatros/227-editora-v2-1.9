@@ -28,7 +28,8 @@ async function compile_template(template_fn) {
 //  's3://blueink/ya13/blueink-page-template-v4.html')
   const o1 = await s3.getObject({Bucket, Key});
   if (!o1.Body) {
-    console.log(`@38 failed to fetch template <${template_fn}>`,{o1})
+    console.error(`@38 [${module.id}] failed to fetch template <${template_fn}>`,{o1})
+    throw new Meteor.Error('template-not-found')
   }
   const template = o1.Body.toString('utf8')
   const compiled_template = hb.compile(template);
@@ -102,10 +103,6 @@ const template = fs.readFileSync(site.template_fn, 'utf8');
 const compiled = hb.compile(template)
 */
 
-function mk_html_Obsolete({meta, md}) {
-  const html = marked(md, {renderer});
-  return compiled(Object.assign(meta, {html}));
-}
 
 const cache_template = {
   template_fn:null,
@@ -120,24 +117,40 @@ function mk_html_compiled(p1) {
   assert(typeof p1 !== 'string', 'Invalid parameters for mk-html')
   ;(verbose >0) && console.log({p1})
 
-  const {meta,
+  const {
     md,
-    subsite = '/',      // from o__path s3://blueink/ya14  => ex: "ya14"
+    Bucket, subsite, xid,
     compiled } = p1;
-
+  let {meta} = p1;
+  meta = meta || {};
   let html1 = md && marked(md, { renderer: renderer });
   meta.shortId = shortid.generate();
-  html1 = html1.replace(/\\rarr[\s]+/g,'&rightarrow;')
+  html1 = html1
+  //    .replace(/\\\-/g,'&ndash;') should be done before renderer...
+      .replace(/\\rarr([\s\\])/g,'&rightarrow;$1')
+      .replace(/\\[\s]+/g,'&ensp;')
+  //    .replace(/\\[\-]{2,}/g,'&mdash;')
 
   const o = {
-    article: html1, // .replace(/\\rarr[\s]+/g,'&rightarrow;')
+    Bucket,subsite, xid,
+    meta, // for hsize
   }
+
+
+  ;(verbose >0) && console.log(`@140 [${module.id}] mk_html_compiled o:`,o)
+
+  Object.assign(o, {
+    article: html1,
+  })
+
 
   const html = compiled(o);
 
 //  console.log(`@62 :`, {html})
   return Object.assign(p1,{html});
 }
+
+// --------------------------------------------------------------------------
 
 async function mk_html(p1) {
   const verbose =0;
@@ -147,15 +160,23 @@ async function mk_html(p1) {
 
   const {meta,
     md,
-    subsite = '/',      // from o__path s3://blueink/ya14  => ex: "ya14"
-    template_fn } = p1;
+    Bucket,subsite, xid,
+    template_fn,
+    cache_disabled } = p1;
 
+  assert(Bucket, '@154 Bucket is missing')
+  assert(subsite, '@155 subsite is missing')
+  assert(xid, '@156 xid is missing')
 
   assert(md, 'missing-md-code for mk-html')
+
+  /*
+  meta from MD-file may be absent.
   assert(meta, 'missing-meta for mk-html')
+  */
   assert(template_fn, 'missing-template for mk-html')
 
-  if ((template_fn != cache_template.template_fn)||(! cache_template.compiled)) {
+  if (cache_disabled || (template_fn != cache_template.template_fn)||(! cache_template.compiled)) {
     cache_template.template_fn =null;
     cache_template.compiled =  await utils.compile_template(template_fn); // *******************************************
     cache_template.template_fn =template_fn;
@@ -167,43 +188,10 @@ async function mk_html(p1) {
   Object.assign(p1,{
     compiled: cache_template.compiled
   })
-  return mk_html_compiled(p1)
+  const html = mk_html_compiled(p1)
+  ;(verbose >0) && console.log(`@175 html:`,{html})
 
-//========================================================================
-
-  const html1 = md && marked(md, { renderer: renderer });
-
-  meta.shortId = shortid.generate();
-
-  ;(verbose >0) && console.log(`@138 `,{meta})
-
-  const {shortId, img:meta_img, pdf:meta_pdf, ori, sku} = meta;
-
-  /******************
-  specific yellow-book
-
-  *******************/
-
-  const {xid} = meta;
-  assert ((xid.length > 6), `Invalid xid`)
-
-  const o = {
-    xid, // dirName !!!! full xid.
-    sku,
-    ori,
-    subsite, // https://ultimheat.co.th/<subsite>
-    template_fn,
-    shortId,
-    article: html1.replace(/\\rarr[\s]+/g,'&rightarrow;')
-  }
-
-  ;(verbose >0) && console.log(`@309 :`, {o})
-
-
-  const html = cache_template.compiled(o);
-
-//  console.log(`@62 :`, {html})
-  return Object.assign(p1,{html});
+  return html;
 } // mk-html
 
 
@@ -273,7 +261,7 @@ function get_html_fn(batch_fn, xid) {
 
 
 async function html2ts_vector({db, xid, html, dryRun}) {
-  const verbose =1;
+  const verbose =0;
 //  const {en,th,'meta.pdf':pdf, 'meta.img':img, meta} = scan_e3live_data(html)
   const retv1 = scan_e3live_data(html)
   console.log(`@233 `,{retv1})
@@ -329,7 +317,7 @@ async function html2ts_vector({db, xid, html, dryRun}) {
 *********************************************/
 
 function scan_e3live_data(html) {
-  const verbose =1;
+  const verbose =0;
   const o ={};
 
   function add(k,v) {
@@ -424,7 +412,7 @@ async function write_index(o_path, index) {
 }
 
 function mk_index1({xid, html}) {
-  const verbose =1;
+  const verbose =0;
 //  const {en,th,'meta.pdf':pdf, 'meta.img':img, meta} = scan_e3live_data(html)
 
   const retv1 = scan_e3live_data(html)
@@ -460,7 +448,7 @@ function scan_e3live_data(html) {
 //  console.log({head_meta})
   if (! meta_tags['xid']) {
     console.log(`ALERT e3live.xid is missing, skipping.`)
-    console.log(`@164 `,{meta_tags})
+    console.error(`@465 [${module.id}] scan_e3live_data meta_tags (head):`,meta_tags)
 //    return {};
   }
   // console.log(`@158 html.length:${html.length}`,{meta_tags})

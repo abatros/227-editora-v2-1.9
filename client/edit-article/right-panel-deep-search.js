@@ -1,21 +1,53 @@
 import './right-panel-deep-search.html'
+import assert from 'assert';
 import utils from '/shared/utils.js'
 import path from 'path';
 import uparse from 'url-parse';
+import yaml from 'js-yaml';
+import {parse_s3filename} from '/shared/utils.js'
 
+const verbose =0;
 const TP = Template.right_panel_deep_search;
 
 //const listing = new ReactiveArray();
 let listing = null;
 const timeStamp = new ReactiveVar(null);
 
+const config_cache ={};
+
+function get_publish_cfg(workspace) {
+  const yaml_fn = path.join(workspace,'.publish.yaml')
+  if (config_cache.yaml_fn == yaml_fn) {
+    return config_cache.cfg;
+  }
+
+  ;(verbose >0) && console.log(`@21 UPDATING CACHE FOR <${yaml_fn}>`)
+  return new Promise((resolve,reject)=>{
+    Meteor.call('get-s3object',yaml_fn,(err,data)=>{
+      if (err) {
+        console.error(`Unable to get <${yaml_fn}> err:`,err);
+        throw err;
+      }
+      console.log('@17 ',{data})
+      const cfg = yaml.safeLoad(data.data)
+      console.log('@18 ',{cfg})
+      const {path} = cfg;
+      console.log('@19 ',{path})
+      config_cache.yaml_fn = yaml_fn;
+      config_cache.cfg = cfg;
+      resolve(config_cache.cfg)
+    }) // call
+  }) // Promise
+} // get-publish-cfg
+
+
 TP.onCreated(function(){
-  console.log(`> onCreated right-panel-deep-search`)
+  ;(verbose >0) && console.log(`> onCreated right-panel-deep-search`)
 })
 
 TP.onRendered(function(){
   const tp = this;
-  console.log(`> onRendered right-panel-deep-search`)
+  ;(verbose >0) && console.log(`> onRendered right-panel-deep-search`)
   const input = tp.find('input');
   input.value = ''
 })
@@ -24,7 +56,7 @@ TP.events({
   'keyup input': (e,tp)=>{
     ///console.log(`@8 keyCode: (${e.keyCode})`)
     if (e.key == 'Enter') { // (e.keyCode == 13)
-     console.log(`Do something with (${e.target.value})`);
+     ;(verbose >0) && console.log(`Do something with (${e.target.value})`);
      let s3prefix = e.target.value;
 
      deep_search(tp, s3prefix);
@@ -41,18 +73,32 @@ TP.events({
     Session.set('s3-url',s3fn)
 //    update_left_panel(s3fn)
 }, */
-  'submit form.js-lookup': (e,tp)=>{
+  'submit form.js-lookup': async (e,tp)=>{
     e.preventDefault()
-    console.log(`@44 click `,{e})
-    console.log(`@45 click `,e.target) // div.directory-item
+    ;(verbose >0) && console.log(`@44 click `,{e})
+    ;(verbose >0) && console.log(`@45 click `,e.target) // div.directory-item
     const target = event.target;
-    const query = target.query.value;
-//    tp.s3dir = target.dirName.value; // could be reactive...
-    console.log(`@46 query:${query}`) // div.directory-item
-    const vpath = 'dkz.projects'
+
+    let query = target.query.value;
+    let vpath = Session.get('search-path');
+
+    const v = query.match(/^(.*)\s+path:([^\s]*)$/)
+    if (v) {
+      query = v[1];
+      vpath = v[2];
+    }
+    ;(verbose >0) && console.log({v})
+
+    if (!vpath) {
+      vpath = await get_vpath_from_config();
+    }
+
+    assert(query)
+    assert(vpath)
     deep_search(tp, vpath, query)
   },
   'submit form.js-item': (e,tp)=>{
+    const verbose =0;
     e.preventDefault()
 //    console.log(`@57 submit `,{e})
 //    console.log(`@58 submit target: `,e.target) // div.directory-item
@@ -61,7 +107,7 @@ TP.events({
     const name = e.currentTarget.attributes.name;
     const iSeq = e.currentTarget.attributes.data.value;
     if (name) {
-      console.log(`@59 (${opCode}): `,name.value)
+      ;(verbose >0) && console.log(`@59 (${opCode}): `,name.value)
       switch(opCode) {
         case 'edit': break;
         case 'preview': break;
@@ -74,36 +120,17 @@ TP.events({
       */
 
 
-      console.log(`@77 listing[${iSeq}]:`,listing[iSeq])
+      ;(verbose >0) && console.log(`@77 select article[${iSeq}]:`,listing[iSeq])
       const item = listing[iSeq];
       const url = item.data.url;
-
-
-      const s3_url = reverse_url(url)
-
-      function reverse_url(url) {
-        // should read data from NGINX
-        // or include Bucket name in web-page
-        let Bucket;
-        const {hostname, pathname} = uparse(url);
-        switch(hostname) {
-          case 'abatros.com': Bucket='abatros'; break;
-          case 'ultimheat.co.th': Bucket='blueink'; break;
-          default: return null;
-        }
-
-        return 's3://' + path.join(Bucket,pathname,'index.md');
+      const s3_url = item.data.s3fn;
+      if (!s3_url) {
+        console.log(`@122 select article[${iSeq}]:`,item)
+        throw 'missing s3_url'
       }
 
-      /*
-      console.log(`@79 url:`,item.data.url)
-      // convert url into s3://
-      ............. NOOOO it should be in current subsite...
-      subsite => path => results ???? hummm
-      */
-
-      //console.log(`TODO@94 reverse-url <${url}>`,{hostname},{pathname});
-      //throw 'TODO@94 reverse-url'
+      //console.log(`@146 session.s3-url := <${s3_url}>`)
+      validate_s3fn(s3_url)
       Session.set('s3-url',s3_url);
       /*
 
@@ -113,6 +140,17 @@ TP.events({
     } // name
   },
 })
+
+function validate_s3fn(s3fn) {
+  const {Bucket,Key,subsite,xid,base,ext} = parse_s3filename(s3fn)
+  if (!Bucket || !Key) {
+    console.trace('@161')
+    throw 'fatal@161'
+  }
+  ;(verbose >0) && console.log(`validate(${s3fn}) => <${Bucket}><${Key}> subsite:<${subsite} xid:<${xid}> base:<${base}>`)
+  return s3fn;
+}
+
 
 TP.helpers({
   items: ()=>{
@@ -124,10 +162,35 @@ TP.helpers({
 
 // ------------------------------------------------------------------------
 
+async function get_vpath_from_config() {
+  const verbose =0;
+  let workspace = Session.get('workspace')
+  if (!workspace) {
+    const s3fn = Session.get('s3-url');
+    const {Bucket,Key,subsite} = parse_s3filename(s3fn)
+    workspace = path.join(Bucket,subsite);
+  }
+  ;(verbose >0) && console.log(`@52 workspace:`, workspace)
+  const cache_ = await get_publish_cfg(workspace);
+  const {path:vpath} = cache_;
+  if (!vpath) {
+    console.error(`@176 Missing path in <${workspace}> `,{cache_})
+    throw 'fatal@176';
+  }
+
+  ;(verbose >0) && console.log(`@53 vpath:`, vpath)
+  return vpath;
+}
+
+// ------------------------------------------------------------------------
+
 function deep_search (tp, vpath, query) {
+  const verbose =0;
 //  tp.max_results_reached.classList.add('nodisplay')
   //    tp.execute_query(query);
-  Meteor.call('deep-search',{vpath, query}, (err,data)=>{
+  assert(vpath)
+  assert(query)
+  Meteor.call('deep-search',{path:vpath, query}, (err,data)=>{
     //tp.etime.set(new Date().getTime() - etime);
     if (err) {
       console.log(`ERROR Meteor.call(deep-search)
@@ -166,8 +229,8 @@ function deep_search (tp, vpath, query) {
     */
 
     const {pages, audit, etime} = data;
-    console.log(`found ${pages.length} pages data:`,data)
-
+    ;(verbose >0) && console.log(`found ${pages.length} pages data:`,data)
+    console.log(`deep-search found ${pages.length}`)
     listing = data.pages; // or pages.set(..)
     timeStamp.set(new Date().getTime())
     // limit to 100 results

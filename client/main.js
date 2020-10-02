@@ -2,6 +2,7 @@ import { Template } from 'meteor/templating';
 import { ReactiveVar } from 'meteor/reactive-var';
 
 import './main.html';
+import './client-app.js';
 import './edit-article/edit-article.js'
 import './new-article/new-article.js'
 import './directory/subsite-directory.js'
@@ -63,4 +64,41 @@ Template.registerHelper('fileName_or_url', function() {
   }
   return s3fn;
   */
+});
+
+
+// --------------------------------------------------------------------------
+
+function isNotLoggedIn(context, redirect) {
+  console.log(`@73 userId:<>`)
+  let userId = Session.get('userId')
+  if (!userId) {
+    userId = localStorage.getItem('userId'); // last logged-in
+  }
+  /*
+    if (!Meteor.user() && !Meteor.loggingIn()) {
+        redirect('/login');
+    }*/
+
+  console.log(`@82 userId:<${userId}>`,{userId})
+
+  if (!userId || userId == "null") {
+    console.log(`@85 `,FlowRouter.current())
+    console.log(`@86 `,FlowRouter.current().path)
+    console.log(`@87 `,FlowRouter.current().route)
+    Session.set('requested-target',FlowRouter.current().path)
+    redirect('/welcome')
+  }
+
+  Session.set('userId',userId);
+
+}
+
+FlowRouter.triggers.enter([
+  function(context,redirect) {
+    console.log(`@95 userId:<>`)
+  },
+  isNotLoggedIn
+],{
+  except: ['welcome']
 });

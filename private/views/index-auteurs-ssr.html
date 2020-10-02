@@ -1,0 +1,94 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta content="text/html" http-equiv="Content-Type">
+
+
+  <style>
+    .red {color:red;}
+    .green {color:green;}
+    #index-auteurs {
+       font-family:times;
+    }
+
+    #index-auteurs b {
+       font-family:times;
+       color: rgb(100,100,100)
+    }
+
+    #index-auteurs span.yp {
+      font-family: helvetica;
+      font-size:10pt;
+      font-weight:bold;
+    }
+
+    a {
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+<div id="index-auteurs" style="margin-left:20px;">
+
+
+  <h3>Index des Auteurs.</h3>
+  <h5>Revision: Sept 30, 2020</h5>
+
+  {{#each au in auteurs}}
+  <div>
+    <div style="margin:5px 0 0 0; border-bottom:3px solid rgb(230,230,230);padding:0 0 10px 0;">
+      <b>Auteur(s) : </b>
+      <a href="/auteur/{{au.auteurName}}" style="color:#c16604;font-weight:bold;">{{{au.auteurName}}}</a>
+
+      <div style="margin:5px 0 0 20px;">
+        {{#each title in au.titres}}
+          <div style="margin:4px 0 0 0px;">
+            <b>Titre du (des) document(s) :</b><br>
+            <span class="yp">({{title.yp}})</span> &ndash;
+            <a href="/xid/{{title.xid}}" target="_blank">{{title.title}}</a>
+
+            <span style="font-size:9pt;">[{{title.xid}}]
+              {{#if title.restricted}}
+              <span class="red">Restricted</span>{{/if}}
+              {{#if title.transcription}}
+              <span class="green">Transcription</span>{{/if}}
+            </span>
+
+
+
+            {{#if title.restricted}}
+            <div style="margin:0 0 0 0px;" class="red">
+              &rarr; Document  sous droits d'auteur, non communicable.
+            </div>
+            {{else}}
+            <div style="margin:4pt 0 0 0px;">
+              <b>Lien(s) vers article(s) :</b>
+              {{#each pdf in title.links}}
+              <div>
+                &rarr;
+
+                <div style="display:inline-block">
+                  <a href='https://ultimheat.com/s3-museum/{{pdf.fn}}.pdf'
+                    target="anotherTab">
+                    {{pdf.fn2}}
+                  </a>
+                </div>
+
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      </div>
+    </div>
+    <div style="display:table-cell;padding-left:10px;display:none;">
+      {{au.latest_auteur}}
+    </div>
+  </div>
+  {{/each}}
+</div>
+</body>
+
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="utf-8">
+<meta content="text/html" http-equiv="Content-Type">
+
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+<script type="text/javascript">
+  const requestURL = 'http://museum.us-east-1.linodeobjects.com/index-titres.json';
+  const request = new XMLHttpRequest();
+  request.open('GET', requestURL);
+  request.responseType = 'json'; // that does JSON.parse
+  request.send();
+  request.onload = function() {
+    let index = request.response;
+    console.log(`@22 index_titres.length:`,index.length)
+    console.log(`@23 index_titres:`,{index})
+
+    var template = $("#template-titres").html();
+    console.log(`@30 found template length:${template.length}`)
+    const compiledCode = Handlebars.compile(template);
+
+    var result = compiledCode({index_titres:index});
+    $("#content").html(result);
+  }
+</script>
+
+
+
+<script>
+
+  $(document).ready(function(){
+  });
+</script>
+
+<style>
+    .red {color:red;}
+    .green {color:green;}
+    #index-constructeurs {
+      font-family: times;
+    }
+    #index-constructeurs b {
+      color: rgb(100,100,100)
+    }
+    #index-constructeurs h5 {
+      color: rgb(100,100,100);
+      margin: 3px 0 0 0;
+      padding: 0;
+      font-family: times;
+      font-size: 12pt;
+    }
+    #index-constructeurs span.yp {
+      font-size:9pt;
+      font-weight:bold;
+      font-family: helvetica;
+    }
+    #index-constructeurs span.acronym {
+      font-size:11pt;
+      font-weight: 500;
+      font-family: helvetica;
+    }
+</style>
+</head>
+
+
+
+<body>
+  <h2>Index des Titres</h2>
+  <h5>Revision Oct 01, 2020</h5>
+  <br><br>
+
+  <div id="content"></div>
+</body>
+
+<script id="template-titres" type="text/x-handlebars-template">
+  <div id="index-s3" style="margin-left:20px;">
+
+
+    <!--
+    <div style="border:0px solid black; margin:5px; padding:2px;">
+      status:{{data_status}}
+      <input type="text" id="find-auteurs-input" style="height:20px; width:100%;">
+    </div>
+  -->
+
+    <!--
+      xid
+      indexName : indexNames[0]
+      yp
+      links []
+      auteurs []
+      transcription: bool
+      restricted: bool
+    -->
+
+    {{#each index_titres}}
+    <div>
+      <div style="margin:5px 0 0 0; border-bottom:3px solid rgb(230,230,230);padding:0 0 10px 0;">
+        <!--
+        <h5>Titre:</h5>
+        -->
+        <a href="page/{{xid}}"
+          title="xid:{{xid}}"
+        >{{{indexName}}}</a>&ensp;<span class="yp">({{yp}})</span>
+        <div style="margin: 5px 0 0 0;">
+          <b>Auteur(s) :</b>
+          {{#each auteurs}}
+          <span class="auteur">{{.}}</span>
+          {{/each}}
+        </div>
+
+        <div style="margin:4px 0 0 0px;">
+            {{#if restricted}}
+            <span class="red">Restricted</span>{{/if}}
+            {{#if transcription}}
+            <span class="green">Transcription</span>{{/if}}
+
+          {{#if restricted}}
+          <div style="margin:0 0 0 0px;" class="red">
+            &rarr; Document  sous droits d'auteur, non communicable.
+          </div>
+          {{else}}
+          <div style="margin:3px 0 0 0px;">
+            {{#each links}}
+            <div>
+              &rarr; <a href="{{pdf.fn}}">{{fn}}.pdf</a>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+
+        {{#if titre_origine}}
+        <br><b>Publié sous le titre original :</b> {{titre_origine}} (<span class="yp">{{yp}}</span>)
+        {{/if}}
+
+
+
+      </div>
+    </div>
+    {{/each}}
+  </div>
+
+</script>
+
+
+</html>

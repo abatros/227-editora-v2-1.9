@@ -113,7 +113,7 @@ const compiled = hb.compile(template)
 // ---------------------------------------------------------------------------
 
 async function mk_html(p1) {
-  const verbose =1;
+  const verbose =0;
 
   if (typeof p1 === 'string') {
     throw "Invalid parameter for mk_html"
@@ -228,7 +228,7 @@ function get_html_fn(batch_fn, xid) {
 
 
 async function html2ts_vector({db, xid, html, dryRun}) {
-  const verbose =1;
+  const verbose =0;
 //  const {en,th,'meta.pdf':pdf, 'meta.img':img, meta} = scan_e3live_data(html)
   const retv1 = scan_e3live_data(html)
   console.log(`@233 `,{retv1})
@@ -285,7 +285,7 @@ async function html2ts_vector({db, xid, html, dryRun}) {
 *********************************************/
 
 function scan_e3live_data(html) {
-  const verbose =1;
+  const verbose =0;
   const o ={};
 
   function add(k,v) {
@@ -357,7 +357,7 @@ function get_meta_tags($) { // HEAD
 // -------------------------------------------------------------------------
 
 async function commit_s3data(cmd) {
-  const verbose =1;
+  const verbose =0;
   console.log(`> yellow-book::commit_s3data `,{cmd})
 
   /**********************************

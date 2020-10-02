@@ -1,5 +1,6 @@
 import './right-panel-header.html'
 
+const verbose =0;
 const TP = Template.right_panel_header;
 
 TP.onRendered(function() {
@@ -31,11 +32,11 @@ TP.events({
       it.classList.remove('active') // light off.
     })
 
-    console.log('@26 click ',{tp},{e})
-    console.log('@27 click ',e.target)
-    console.log('@28 click ',e.target.classList.contains('active'))
-    console.log('@29 click ',e.target.classList.toggle('active'))
-    console.log('@30 click ',e.target.getAttribute('data'))
+    ;(verbose >0) &&console.log('@26 click ',{tp},{e})
+    ;(verbose >0) &&console.log('@27 click ',e.target)
+    ;(verbose >0) &&console.log('@28 click ',e.target.classList.contains('active'))
+    ;(verbose >0) &&console.log('@29 click ',e.target.classList.toggle('active'))
+    ;(verbose >0) &&console.log('@30 click ',e.target.getAttribute('data'))
     const data = e.target.getAttribute('data')
 //    Session.set(data,true)
     select_rpanel(tp, data)
@@ -46,7 +47,7 @@ TP.events({
 Template.right_panel_btn.events({
   'xclick': (e, tp)=>{
     //e.preventDefault();
-    console.log(`@47 `,{tp})
+    ;(verbose >0) &&console.log(`@47 `,{tp})
     Session.set('showing-'+tp.data.name+'-panel',true)
     //return 0;
   }

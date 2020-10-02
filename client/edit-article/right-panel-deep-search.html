@@ -9,7 +9,8 @@
 <template name="right_panel_deep_search">
 <div class="hbox qc" style="padding:5px 0px;">
   <form class="js-lookup">
-  <input type="text" name="query" style="height:16pt;">
+  <input type="text" name="query"
+  style="height:20pt; width:300pt; font-weight:bold; font-size:12pt; font-family:arial;">
   <button type="submit"
   style="padding-left:10px;font-size:14pt;"
   ><i class="fa fa-arrow-right"></i></button>
@@ -28,7 +29,7 @@
   <form class="js-item" name="{{this.xid}}" data="{{@index}}">
   <hbox class="qj directory-item" >
     <button class="js-edit sammy-nowrap-2"
-    style="flex-grow:1; text-align:left; color:#8e4900;
+    style="flex-grow:1; text-align:left; color:#03008e;
     font-weight:bold; font-size:11pt;"
     type="submit" name="preview" title="{{this.xid}}" data="{{@index}}"
     >{{this.data.h1}}</button>

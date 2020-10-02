@@ -114,7 +114,7 @@ function save_e3md(cmd) {
 
 
 async function commit_s3data(cmd) {
-  verbose =1;
+  verbose =0;
   console.log(`> yellow-book::commit_s3data `,{cmd})
 
   /**********************************
