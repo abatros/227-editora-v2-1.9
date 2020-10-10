@@ -8,63 +8,18 @@
 </head>
 
 <template name="edit_article">
-<div class="hbox _qc" style="border:5px solid lightgray;
-            height:100%;
-            width:100%;
-            justify-content:center;
-            align-items: flex-start;
-                         ">
+
+<vbox
+style="_height:100vh; height:100px; background-color:black;z-index:1;">
+</vbox>
 
 
-  <!-- begin left-panel -->
-  {{#if session 's3-url'}}
-  <div class="vbox" style="border:5px solid lightblue; height:100%;
-               min-width:600px; max-width:1000px;
-               flex-grow:1; padding:10px;">
-    {{> edit_panel flags=flags}}
-  </div>
-  {{/if}}
-  <!-- end left-panel -->
+{{> right_panel_directory}}
+{{> edit_panel flags=flags}}
+{{> right_panel_info}}
+{{> right_panel_deep_search}}
+{{> find_panel}}
 
-  <!-- begin right-panel -->
-  {{#if session 'showing-right-panel'}}
-  <div class="vbox" style="border:5px solid lightblue; height:100%;
-    min-width:100px; max-width:700px;
-    flex-grow:1; padding:10px;
-    ">
-
-    <div class="vbox space-between"
-      style="height:100%;
-        _justify-content:space-between;
-        border:3px solid yellow;
-        padding-top:10px;
-        min-width:450px;">
-
-      {{> right_panel_header}}
-
-      <br>
-
-      {{#if session 'showing-preview-panel'}}
-      {{> right_panel_preview}}
-      {{/if}}
-
-      {{#if session 'showing-directory-panel'}}
-      {{> right_panel_directory}}
-      {{/if}}
-
-      {{#if session 'showing-info-panel'}}
-      {{> right_panel_info}}
-      {{/if}}
-
-      {{#if session 'showing-deep-search-panel'}}
-      {{> right_panel_deep_search}}
-      {{/if}}
-
-    </div> <!-- vbox -->
-  </div> <!-- vbox yellow -->
-  {{/if}}
-  <!-- end right-panel -->
-</div> <!-- hbox -->
 
 </template>
 

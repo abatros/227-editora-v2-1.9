@@ -1,0 +1,60 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>{{title}}</title>
+    <meta name="e3live.version" content="1.03">
+    <meta name="e3live.xid" content="{{xid}}">
+    <meta name="e3live.title" content="{{title}}">
+    <meta name="e3live.page-template" content="{{page_template}}">
+    <meta name="e3live.page-template-folder" content="{{page_template_folder}}">
+    <meta name="description" content="{{content}}">
+    <meta name="keywords" content="{{keywords}}">
+    <meta name="h1" content="{{h1}}">
+
+    <!--
+    <link href="https://fonts.googleapis.com/css?family=Poppins|Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i&amp;display=swap" rel="stylesheet">
+  -->
+	<style>
+    @import url("https://fonts.googleapis.com/css?family=IM+Fell+DW+Pica");
+    @import url('https://fonts.googleapis.com/css2?family=Knewave&display=swap');
+    h1 {
+      font-size:30px; font-family: knewave; font-weight:bold;
+      color: #a25353;
+    }
+	</style>
+
+  <!--
+  <link rel="stylesheet" href="/css/caltek.css">
+  -->
+
+ </head>
+
+
+<body>
+
+  <section id="main" class="nodisplay"
+    style="width:480pt; margin:50px auto 100pt auto;
+  font-size:14pt;
+  line-height:18pt;
+  text-align: justify;
+  width:{{meta.hsize}};{{meta.style}}">
+	<h1
+  style="font-family:IM Fell DW Pica; color:#8a4e0299;
+    margin-top:0px; font-size:30px; font-weight:bold; text-align:center; padding:0 20px 30px 0;">
+    CalTek.net &mdash; Publishing
+    </h1>
+
+    <article data="e3live.id.xid"
+      id="main" class="en card new-card js-e3article editora js-e3live">
+        {{{article}}}
+    </article>
+
+    <div class="btns hbox-qj">
+      <span><a href=".">[ INDEX ]</a></span>
+     </div>
+
+  </section> <!-- end of main block -->
+
+</body>
+</html>

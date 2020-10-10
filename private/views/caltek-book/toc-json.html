@@ -1,0 +1,125 @@
+<html>
+
+<!--
+      Table Of Content (caltek-book)
+      build from toc.json
+-->
+
+<head>
+  <meta charset="utf-8">
+  <meta content="text/html" http-equiv="Content-Type">
+
+  <!--
+  <link rel="stylesheet" href="style.css">
+  -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+
+  <script type="text/javascript">
+    const requestURL = 'http://us-east-1.linodeobjects.com/{{Bucket}}/{{Key}}';
+    const request = new XMLHttpRequest();
+    request.open('GET', requestURL);
+    request.responseType = 'json'; // that does JSON.parse
+    request.send();
+    request.onload = function() {
+      let index = request.response;
+      console.log(`@22 index_pages.length:`,index.length)
+
+      var template = $("#template-toc").html();
+      console.log(`@30 found template length:${template.length}`)
+      console.log(`@31 found template :`,{template})
+
+      const compiledCode = Handlebars.compile(template);
+
+      console.log({index})
+
+      index.sort((a,b)=>{
+        return (a).localeCompare(b)
+      })
+
+      index = index.map(fn => (fn.slice(0,-3)));
+
+      console.log({index})
+
+      var result = compiledCode({toc:index}); // from index-constructeurs.js
+      $("#content").html(result);
+    }
+  </script>
+
+  <script type="text/javascript">
+    function go_pdf(path) {
+      console.log(`@53 path:(${path})`)
+      const _etime = new Date().getTime();
+      try {
+        /************************************************
+          replace this by call to api to rebuild PDF.
+          immediate return if already exists.
+          requestUrl (HEAD) := "localhost:3000/caltek/books/101-dont-go-where/chapter-01.pdf"
+          the request-processor should activate mk-pdf if not exists
+          On response => redirect to the PDF.
+        *************************************************/
+        const requestURL = 'http://us-east-1.linodeobjects.com/{{Bucket}}/{{Key}}';
+        const request = new XMLHttpRequest();
+        request.open('HEAD', requestURL);
+  //      request.responseType = 'json'; // that does JSON.parse
+        request.onerror = function(x) {
+          console.log('ERROR',{x})
+        }
+        request.onload = function() {
+          // NO onLoad for HEAD
+          console.log(`@60 request.response:`,request.response);
+          console.log(`@61 ${new Date().getTime() - _etime} ms.`)
+          // HERE GOTO PDF page
+          //window.location = 'http://us-east-1.linodeobjects.com/{{Bucket}}/{{Key}}'; // simulate
+          //window.location = 'http://localhost:3000/caltek/books/101-dont-go-where/101-chapter-1';
+        }
+        request.onreadystatechange = function() {
+          if (this.readyState == this.DONE) {
+            console.log(`this.status:`,this.status);
+            // if 200 => redirect
+          }
+        };
+        request.send();
+      }
+
+      catch(err) {
+        console.log('ERROR',{err})
+      }
+
+    }
+  </script>
+
+
+  <script>
+    $(document).ready(function(){});
+  </script>
+
+
+  <style>
+    .red {color:red;}
+    .green {color:green;}
+
+    .directory-entry {
+      font-size:16pt; line-height:24pt;
+      font-family: arial;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+  </style>
+
+
+</head>
+
+<body style="margin-left:100px;">
+  <h2 style="margin-bottom:0px;">{{h1}}</h2>
+  <h3 style="margin-bottom:0px;">Table of Content</h3>
+  <br>
+  <div id="content"></div>
+</body>
+
+</html>

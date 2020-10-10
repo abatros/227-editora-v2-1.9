@@ -1,0 +1,6 @@
+- url: caltek/books/101-dont-go-where
+  require: /server/http-server/caltek
+  h1: Don't Go Where I Can't
+- url: caltek/books/102-next-book
+  require: /server/http-server/caltek
+  h1: My second book.

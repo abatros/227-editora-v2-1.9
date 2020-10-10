@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta content="text/html" http-equiv="Content-Type">
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+
+  <script type="text/javascript">
+    const requestURL = 'http://museum.us-east-1.linodeobjects.com/index-pages.json';
+    const request = new XMLHttpRequest();
+    request.open('GET', requestURL);
+    request.responseType = 'json'; // that does JSON.parse
+    request.send();
+    request.onload = function() {
+      let index = request.response;
+      console.log(`@22 index_pages.length:`,index.length)
+
+      var template = $("#template-pages").html();
+      console.log(`@30 found template length:${template.length}`)
+      const compiledCode = Handlebars.compile(template);
+
+      console.log({index})
+
+      index.sort((a,b)=>{
+        a.yp = a.yp || '0000'
+        b.yp = b.yp || '0000'
+        if (!a.yp || !b.yp) {
+          console.log({a})
+          console.log({b})
+          throw 'fatal!34'
+        }
+        return (''+a.yp+a.h1).localeCompare(''+b.yp+b.h1)
+      })
+
+
+      var result = compiledCode({index_pages:index}); // from index-constructeurs.js
+      $("#content").html(result);
+    }
+  </script>
+
+
+
+  <script>
+
+    $(document).ready(function(){
+    });
+  </script>
+
+  <style>
+    .red {color:red;}
+    .green {color:green;}
+
+    #index-auteurs {
+       font-family:times;
+    }
+
+    #index-auteurs b {
+       font-family:times;
+       color: rgb(100,100,100)
+    }
+
+    #index-auteurs span.yp {
+      font-family: helvetica;
+      font-size:10pt;
+      font-weight:bold;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+  </style>
+
+
+</head>
+
+<body>
+  <h2 style="margin-bottom:0px;">Index des Pages.</h2>
+  <h5 style="margin:0;">Revision: Sept 30, 2020</h5>
+  <br>
+  <div id="content"></div>
+</body>
+
+<script id="template-pages" type="text/x-handlebars-template">
+{{#each index_pages}}
+<div>
+-{{@index}}- ({{yp}}) <a href="page/{{xid}}" title="{{xid}}">{{h1}}</a> &mdash; {{h2}}
+</div>
+{{/each}}
+
+</script>
+
+
+</html>

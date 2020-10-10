@@ -45,6 +45,8 @@ function hashCode(str) {
 
 
 TP.onCreated(function() {
+  console.log(`info-panel.onCreated`)
+
   const tp = this;
   tp.refresh_requested = new ReactiveVar();
 })

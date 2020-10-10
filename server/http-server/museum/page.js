@@ -15,7 +15,13 @@ const s3 = require('/server/lib/aws-s3.js')();
 
 // ---------------------------------------------------------------------------
 
-WebApp.connectHandlers.use('/museum-api/page/', page);
+WebApp.connectHandlers.use('/museum/page/', page);
+
+//const href_jpeg = 'https://ultimheat.com/s3-museum';
+//const href_pdf = 'https://ultimheat.com/s3-museum';
+
+const href_jpeg = 'https://museum.ultimheat.com/assets';
+const href_pdf = 'https://museum.ultimheat.com/assets';
 
 
 let page_compiled =null;
@@ -47,6 +53,8 @@ async function page(req, res) {
 //  .then( page =>{
     (verbose >0) && console.log(`@25: page `,page)
     const html = SSR.render('page',{
+      href_jpeg,
+      href_pdf,
       it:page,
       isTranscription: ()=>{
         return (page.data.transcription);

@@ -6,7 +6,7 @@ import { WebApp } from 'meteor/webapp';
 
 *****************************/
 
-WebApp.connectHandlers.use('/museum-api/index-auteurs', index_auteurs);
+WebApp.connectHandlers.use('/museum/index-auteurs', index_auteurs);
 
 import path from 'path';
 import yaml from 'js-yaml';

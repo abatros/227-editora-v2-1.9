@@ -4,6 +4,7 @@ const assert = require('assert');
 const os = require('os');
 const fs = require('fs-extra');
 const path = require('path')
+const yaml = require('js-yaml')
 const inspect = require('util').inspect;
 
 const app = express();
@@ -13,31 +14,6 @@ app.use(device.capture());
 app.use(express.static('public'));
 
 
-/************************
-const x_handlebars  = require('./express-handlebars.js');
-//const x_handlebars  = require('express-handlebars');
-app.engine('xhbs', x_handlebars({
-//  defaultLayout:'main',
-  extname: 'hbs',
-//  layoutsDir: 'views',
-//  partialsDir: 'views',
-}));
-app.set('view engine', 'xhbs'); // module
-app.set('views', '/home/dkz/views');
-*****************/
-
-
-/*
-const hbs = require('hbs');
-app.set('view engine','hbs'); // extension name
-//app.set('view engine','html'); // extension name
-app.engine('hbs', require('hbs').__express);
-console.log(`@31 __dirname:<${__dirname}>`)
-//app.set('views', __dirname + '/views');
-//app.set('views', '/home/dkz/views');
-app.set('views', '/home/dkz/2020/227-editora-v2/private/views');
-//app.set('views', '../assets/app/views');
-*/
 
 
 app.get('/ping', (req, res)=>{
@@ -52,14 +28,16 @@ app.get('/ping', (req, res)=>{
   .end(html);
 })
 
-/*
-app.get('/museum-api/s3-static/:id', require('./http-server/museum-api.js').s3_static)
-app.get('/museum-api/s3-render/:id', require('./http-server/museum-api.js').s3_render)
-app.get('/museum-api/s3-index', require('./http-server/museum-api.js').s3_index)
-//app.get('/museum-api/index-auteurs', require('./http-server/museum-api.js').index_auteurs)
-app.get('/museum-api/page/:xid', require('./http-server/museum-api.js').page)
-//app.get('/museum-api/index-marques', require('./http-server/museum-api.js').index_marques)
-app.get('/museum-api/handlebars-test', require('./http-server/museum-api.js').handlebars_test)
-//app.get('/museum-api/index-constructeurs', require('./http-server/museum-api.js').index_constructeurs)
-//app.get('/museum-api/index-titres', require('./http-server/museum-api.js').index_titres)
-*/
+// -------------------------------------------------------------------------
+
+const subsites = yaml.safeLoad(Assets.getText('subsite-instances.yaml'))
+console.log(`@33 `,{subsites})
+
+subsites.forEach(su =>{
+  const {init_instance} = require(su.require);
+  init_instance(su);
+})
+
+Meteor.startup(()=>{
+  //console.log(`@42 app.routes:`,app._router.stack)  
+})

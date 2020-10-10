@@ -6,7 +6,7 @@ import { WebApp } from 'meteor/webapp';
 
 *****************************/
 
-WebApp.connectHandlers.use('/museum-api/index-marques', index_marques);
+WebApp.connectHandlers.use('/museum/index-marques', index_marques);
 
 import path from 'path';
 import yaml from 'js-yaml';

@@ -19,7 +19,8 @@ TP.onCreated(function(){
 
 function guess_mode(fname) {
   if (fname.endsWith('.md')) return 'text/x-markdown';
-  if (fname.endsWith('.html')) return 'application/x-ejs';
+//  if (fname.endsWith('.html')) return 'application/x-ejs';
+  if (fname.endsWith('.html')) return 'htmlmixed';
   if (fname.endsWith('.js')) return 'javascript';
   if (fname.endsWith('.css')) return 'text/css';
   if (fname.endsWith('.yaml')) return 'text/yaml';
@@ -55,6 +56,7 @@ TP.onRendered(function(){
 
     tp.cm.setOption('mode', guess_mode(s3fpath))
     tp.cm.setValue(retv.data);
+    tp.cm.setOption('mode', guess_mode(s3fpath))
     Session.set('edit-s3fpath', s3fpath)
     Session.set('status-lights','status-ok')
     document.title = `admin-edit ${s3fpath}`;

@@ -8,10 +8,11 @@ import './edit-article.html'
 import './edit-panel.js'
 // import './preview-panel.js'
 import './right-panel-header.js'
-import './right-panel-preview.js'
+//import './right-panel-preview.js'
 import './right-panel-info.js'
 import './right-panel-directory.js'
 import './right-panel-deep-search.js'
+import '/client/find/find-panel.js'
 
 
 import utils from '/shared/utils.js'
@@ -32,50 +33,10 @@ const article_meta = new ReactiveVar({});
 import {s3parser} from '/shared/utils.js'
 
 
-
-
-function commit_article_Obsolete(tp) {
-  console.log(`@22 commit-article s3fpath:`, tp.s3fpath)
-  //  console.log(`@206 commit-article meta:`, tp.meta)
-  tp.set_status_light('status-busy')
-
-  const xid = extract_xid(tp.s3fpath)
-
-  assert(tp.s3fpath.startsWith('s3://'), `syntax error s3fpath <${s3fpath}>`)
-
-  Meteor.call('commit-s3data', {
-    s3fpath:tp.s3fpath, // full path for md-file, ex: s3://bueink/ya14/1102-Y3K2/index.md
-    update:true,
-    data:tp.cm.getValue()}, (err,data)=>{
-      if (err) {
-        tp.set_status_light('status-red')
-        throw err; // do things on tp, according to results.
-      }
-      console.log(`@79 `,{data}) // here is the raw-file content
-      //        const tab = window.open('http://localhost:8080/en/new-products/1466','http://localhost:8080/en/new-products/1466')
-
-
-      if (data.error) {
-        console.log(`@83 `, data.error)
-        tp.set_status_light('status-red')
-        Session.set('edit-message',data.err_msg)
-        return;
-      }
-
-
-
-      tp.set_status_light('status-ok')
-      Session.set('edit-message','commit Ok.')
-    return;
-    }
-
-  )
-}
-
-
-
 TP.onCreated(function(){
   const tp = this;
+  console.log(`> edit-article.onCreated`)
+
   etime = new Date().getTime();
   const etime_ = new Date().getTime();
 //  console.log(`@18: Meteor.connection `,Meteor.connection)
@@ -90,10 +51,10 @@ TP.onCreated(function(){
   //console.log(`@33 done with Template.edit_article.onCreated [${new Date().getTime() - etime1} ms]`)
   Session.set('edit-message','loading...')
   if (Session.get('workspace')) {
-    Session.set('showing-right-panel',true);
-    Session.set('showing-directory-panel',true);
+  //  Session.set('showing-right-panel',true);
+    Session.set('panel','showing-dir3-panel');
   } else {
-    Session.set('showing-right-panel',false);
+//    Session.set('showing-right-panel',false);
   }
 })
 
@@ -101,6 +62,32 @@ TP.onCreated(function(){
 TP.onRendered(function() {
   const tp = this;
   const etime_ = new Date().getTime();
+  console.log(`> edit-article.onRendered`)
+
+  this.autorun(() =>{
+    let panel = Session.get('panel');
+    if (!panel) {
+      // panel might not be ready here. It's Ok.
+      //console.error('sys-error Session::panel undefined')
+      return;
+    }
+    panel = panel.replace('showing-','')
+    console.log({panel})
+    //const panels = tp.findAll('vbox.a-panel');
+    //console.log(`panels:`,panels)
+    const panels = document.querySelectorAll('vbox.a-panel')
+    panels.forEach(p =>{
+      console.log(`panel <${p.id}>`)
+      if (p.id == panel) {
+        p.classList.remove('hidden')
+      } else {
+        p.classList.add('hidden')
+      }
+    })
+
+
+  })
+
 })
 
 TP.helpers({
@@ -153,10 +140,9 @@ TP.helpers({
 })
 
 
-
 Template.edit_article_not_found.helpers({
-
 })
+
 
 Template.edit_article_not_found.events({
   'click .js-create-article': (e,tp)=>{
@@ -174,9 +160,7 @@ Template.edit_article_not_found.events({
   }
 })
 
-
-
-
+// --------------------------------------------------------------------------
 
 function capture_options(url) {
   url = url.trim();
@@ -185,124 +169,6 @@ function capture_options(url) {
   const flags = v && (v.length>1) && v[2];
   const s3 = (v && v[1]) || url;
   return {s3, flags};
-}
-
-
-function validate_and_enforce_xid(data, xid) {
-  const v = data.trim().split(/\-\-\-/g); //match(yamlBlockPattern);
-  assert(!v[0])
-  assert(v.length == 3)
-//  v[1] = v[1].replace(/^([^:]+):\s*/gm,'$1<<>>').replace(/:/g,'~!~').replace(/<<>>/g,': ')
-
-  //console.log(v[1]);
-  let meta = yaml.safeLoad(v[1], 'utf8');
-  if (!meta.xid) {
-    meta = Object.assign({xid},meta)
-//    meta.xid = xid;
-    v[1] = yaml.safeDump(meta);
-  }
-  data = `---` + v[1] + '---' + v[2];
-  return data;
-}
-
-
-// ------------------------------------------------------------------------
-
-
-function get_s3Object(tp) {
-  const etime_ = new Date().getTime();
-  assert(tp)
-
-  /*
-    tp is used to update UI : reactive var mostly error and status.
-  */
-
-
-  Meteor.call('get-s3object', tp.s3fpath, (err, data)=>{
-    console.log(`@54 get-e3data got-results [${new Date().getTime() - etime_} ms]`)
-    /*
-        Keep it here, to avoid having a Tracker.autorun !
-    */
-    if (err) {
-      ;(verbose >0) && console.log(`@81 Meteor.call('get-e3data')`)
-      console.log('get-e3data fails:',{err})
-      console.log({data})
-      Session.set('edit-status','error')
-      tp.set_status_light('status-red')
-      Session.set('edit-message','failed')
-      return;
-    }
-
-    console.log(`@112 `,{data})
-    if (data.error) {
-      console.log(`@206 `, data.error)
-      tp.set_status_light('status-red')
-      if (flags == 'force') {
-        Session.set('edit-message','force creating file please wait...')
-        Meteor.call('new-article', tp.s3fpath, (err,data)=>{
-          if (err) {
-            tp.set_status_light('status-red')
-            Session.set('edit-message','new-article system-error1')
-            return;
-          }
-          if (data.error) {
-            tp.set_status_light('status-red')
-            Session.set('edit-message','new-article system-error2')
-            return;
-          }
-
-
-          const {meta, md, error} = utils.extract_metadata(data.data)
-          const cmValue = (meta)?`---\n${yaml.dump(meta)}---${md}`:md;
-          tp.cm.setValue(cmValue);
-          tp.meta = meta;
-          document.title = `edit ${tp.s3fpath}`;
-          Session.set('edit-s3fpath',`${tp.s3fpath}`)
-          tp.set_status_light('status-ok')
-          Session.set('edit-message','ready')
-
-        })
-        return;
-      }
-      Session.set('edit-message','file-not-found')
-      return;
-    }
-
-
-    const {meta, md, error} = utils.extract_metadata(data.data)
-
-    if (error) {
-      console.log(`@117 `,{error})
-      Session.set('edit-s3fpath',`${tp.s3fpath}`)
-      Session.set('edit-message',error)
-      Session.set('edit-status',error)
-      tp.set_status_light('status-red')
-      return;
-    }
-
-    if (!meta || !md) {
-      console.log(`@117 `,{error})
-      Session.set('edit-s3fpath',`${tp.s3fpath}`)
-      Session.set('edit-status', 'no-data')
-      return;
-    }
-
-
-    console.log(`@62 `,{meta},{md})
-    const cmValue = (meta)?`---\n${yaml.dump(meta)}---${md}`:md;
-    assert(tp.cm,'Missing tp.cm')
-    tp.cm.setValue(cmValue);
-    tp.meta = meta;
-    document.title = `edit ${tp.s3fpath}`;
-    Session.set('edit-s3fpath',`${tp.s3fpath}`)
-
-    const {subsite, xid} = utils.extract_xid2(tp.s3fpath);
-    Session.set('subsite',subsite)
-    tp.set_status_light('status-ok')
-    Session.set('edit-message','ready')
-    document.title = xid;
-  })
-
 }
 
 // --------------------------------------------------------------------------
@@ -337,13 +203,19 @@ FlowRouter.route('/edit', { name: 'edit-article',
 
     const {s3, workspace, w3} = queryParams; // full Key for md-file
 
+    const s3fn = s3 || workpace || w3;
+    if (s3fn) {
+      Session.set('original-request', s3fn);
+    }
+
+
     let s3_url, flags;
 
     if (s3) {
       // WE EXPECT A MD-file.
       // ex: /edit?s3=abatros/projects/227-editora-v2.md
       // this /edit?s3=abatros/projects/227-editora-v2[/]
-      //    => will redirect to directory-panel
+      //    => will redirect to dir3-panel
 
       // DO NOT SHOW RIGHT PANEL
       // in the edit-panel, if <s3-url>.index.md does not exists => we will open the directory.
@@ -354,14 +226,24 @@ FlowRouter.route('/edit', { name: 'edit-article',
       const {Bucket,Key,subsite,xid,base,ext} = parse_s3filename(s3fn)
       if (!ext) {
         // we infer it's a directory.
-        s3fn = path.join(Bucket,Key)+'/';
+        //s3fn = path.join(Bucket,Key)+'/';
+        /****************************************************
+
+        we dont need '/' because we know it's a dir3
+
+        *****************************************************/
+        s3fn = path.join(Bucket,Key);
+        ;(verbose >=0) && console.log(`@56 subsite:=<${s3fn}>`)
+        ;(_editora_debug_session) && console.log(`${'@'.repeat(30)} SET session.workspace := <${s3fn}>`)
         Session.set('workspace', s3fn);
+
         BlazeLayout.render('edit_article', {flags});
         return;
       }
 
       s3_url = path.join(Bucket, Key)
       flags = flags_;
+      ;(_editora_debug_session) && console.log(`${'@'.repeat(30)} SET session.s3-url := <${s3_url}>`)
       Session.set('s3-url', s3_url) // this is the requested object-file
 //      Session.set('showing-right-panel',false);
       BlazeLayout.render('edit_article', {flags, s3_url, flags});
@@ -369,7 +251,10 @@ FlowRouter.route('/edit', { name: 'edit-article',
 
     else if (workspace || w3) {
       const ws = workspace || w3;
+      ;(verbose >=0) && console.log(`@245 workspace:=<s3://${ws}>`)
+        _editora_debug_session.set('workspace', 's3://'+ws)
       Session.set('workspace', 's3://'+ws)
+      _editora_debug_session.set('s3-url', null)
       Session.set('s3-url', null) // will close left-panel
     } else {
       console.log(`fatal @581`)

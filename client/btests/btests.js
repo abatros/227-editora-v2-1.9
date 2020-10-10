@@ -235,7 +235,7 @@ async function s3_batch1(tp) {
 
 // ---------------------------------------------------------------------------
 
-FlowRouter.route('/btests', { name: 'edit-article',
+FlowRouter.route('/btests', { name: 'btests',
   triggerEnter: [
     function(context, redirect) {
       const web_page = Session.get('web-page');

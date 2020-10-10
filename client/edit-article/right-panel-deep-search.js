@@ -42,12 +42,12 @@ function get_publish_cfg(workspace) {
 
 
 TP.onCreated(function(){
-  ;(verbose >0) && console.log(`> onCreated right-panel-deep-search`)
+  ;(verbose >=0) && console.log(`> onCreated right-panel-deep-search`)
 })
 
 TP.onRendered(function(){
   const tp = this;
-  ;(verbose >0) && console.log(`> onRendered right-panel-deep-search`)
+  ;(verbose >=0) && console.log(`> onRendered right-panel-deep-search`)
   const input = tp.find('input');
   input.value = ''
 })
@@ -73,7 +73,7 @@ TP.events({
     Session.set('s3-url',s3fn)
 //    update_left_panel(s3fn)
 }, */
-  'submit form.js-lookup': async (e,tp)=>{
+  'submit form.js-search': async (e,tp)=>{
     e.preventDefault()
     ;(verbose >0) && console.log(`@44 click `,{e})
     ;(verbose >0) && console.log(`@45 click `,e.target) // div.directory-item
@@ -91,12 +91,20 @@ TP.events({
 
     if (!vpath) {
       vpath = await get_vpath_from_config();
+      Session.set('search-path', vpath)
     }
 
     assert(query)
     assert(vpath)
     deep_search(tp, vpath, query)
   },
+
+  /******************************************************************
+
+    Visit article
+
+  *******************************************************************/
+
   'submit form.js-item': (e,tp)=>{
     const verbose =0;
     e.preventDefault()
@@ -132,6 +140,7 @@ TP.events({
       //console.log(`@146 session.s3-url := <${s3_url}>`)
       validate_s3fn(s3_url)
       Session.set('s3-url',s3_url);
+      Session.set('panel','showing-edit-panel')
       /*
 
       */
@@ -239,3 +248,26 @@ function deep_search (tp, vpath, query) {
 
   }); // call deep-search
 } // function dee_search
+
+
+// =========================================================================
+
+
+FlowRouter.route('/deep-search', { name: 'deep-search',
+  triggerEnter: [
+    function(context, redirect) {}
+  ],
+  action: function(params, queryParams){
+    const verbose =1;
+    console.log('Router::action for: ', FlowRouter.getRouteName());
+    ;(verbose >0) && console.log(' --- params:',params);
+    document.title = "deep-search";
+    ;(verbose >0) && console.log(`@210: host:`,location.host)
+    const {host} = location;
+    ;(verbose >0) && console.log(`render data:`,Object.assign(params,queryParams))
+
+    console.log(`@595 leaving router (deep-search) :`,queryParams)
+    Session.set('panel','deep-search-panel')
+    BlazeLayout.render('edit_article');
+  }
+});

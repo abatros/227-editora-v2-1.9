@@ -10,11 +10,17 @@ const monitor = require('pg-monitor');
 const {parse_s3filename} = require('/shared/utils.js')
 const {postgres_connect} = require('/server/lib/postgres-connect.js')
 require ('./methods/deep-search.js')
+require ('./methods/find-files.js')
 require ('./methods/refresh-web-page.js')
 require ('./methods.js')
 import {fix_folder_v2, fix_md_mime_type, migration_v1} from './lib/utils.js'
 require ('./http-server.js')
+
 require ('/server/http-server/museum')
+require ('/server/http-server/caltek')
+require ('/server/http-server/abatros')
+
+
 
 let db = null; //  must be in async await postgres_connect();
 const verbose =0;

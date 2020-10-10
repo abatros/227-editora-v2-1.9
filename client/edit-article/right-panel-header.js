@@ -6,11 +6,12 @@ const TP = Template.right_panel_header;
 TP.onRendered(function() {
 })
 
+/*
 function select_rpanel(tp, x) {
   let v = [
-    'showing-preview-panel',
+    'showing-edit-panel',
     'showing-info-panel',
-    'showing-directory-panel',
+    'showing-dir3-panel',
     'showing-deep-search-panel'
   ].filter(it =>{
     Session.set(it, false)
@@ -18,12 +19,14 @@ function select_rpanel(tp, x) {
   })
 
   if (v.length == 1) {
-    Session.set(v[0],true)
+//    Session.set(v[0],true)
+    Session.set('panel',v[0])
     return;
   }
 
   console.error('@18 error in select_rpanel ',{v})
-}
+} **/
+
 
 TP.events({
   'click': (e,tp)=>{
@@ -39,8 +42,19 @@ TP.events({
     ;(verbose >0) &&console.log('@30 click ',e.target.getAttribute('data'))
     const data = e.target.getAttribute('data')
 //    Session.set(data,true)
-    select_rpanel(tp, data)
+//    select_rpanel(tp, data)
+
+    Session.set('panel',data)
   },
+})
+
+TP.helpers({
+  allowed: (x) =>{
+    const p = Session.get('user-profile');
+    if (!p) return false;
+//    console.log(`>>>>>>>>>`,p.panels)
+    return (p.panels.indexOf(x)>=0);
+  }
 })
 
 
@@ -48,7 +62,7 @@ Template.right_panel_btn.events({
   'xclick': (e, tp)=>{
     //e.preventDefault();
     ;(verbose >0) &&console.log(`@47 `,{tp})
-    Session.set('showing-'+tp.data.name+'-panel',true)
+    // Session.set('showing-'+tp.data.name+'-panel',true)
     //return 0;
   }
 })

@@ -1,0 +1,102 @@
+<template name="find_panel">
+
+<vbox id="find-panel"
+class="a-panel hidden"
+style="width:1000px; border:3px solid yellow; margin:0;
+  _height:100%; height:100vh;
+  position:absolute;
+  ">
+
+  {{> right_panel_header}}
+
+  <div class="hbox-ql"
+  style="padding: 5px 20px; background-color:#e6e6b6; margin-bottom:0px; margin-top:3px;">
+    {{session 'search-path'}}
+
+    <button type="button" class="js-path-up"
+    style="padding:0px 10px 0 0;font-size:14pt; margin-left:20px;"
+    ><i class="fa fa-arrow-up"></i></button>
+
+  </div>
+
+
+  <div class="hbox-qc" style="padding:5px 0px;">
+
+    <form class="js-find">
+    <input type="text" name="query" placeholder="enter your query here"
+      style="height:20pt; color:green; width:300pt; font-weight:bold; font-size:12pt; font-family:arial;">
+    <button type="submit"
+      style="padding-left:10px;font-size:14pt;"
+    ><i class="fa fa-arrow-right"></i></button>
+    </form>
+  </div>
+
+
+
+  <vbox style="
+      overflow-y:auto;
+      flex-grow:1;
+      _border: 3px solid orange;
+      font-family:monospace; font-size:9pt; line-height:12pt; padding:5px;
+      ">
+
+
+      {{!--
+    {{#each items}}
+    <hbox>
+      <hbox class="hbox-qr" style="width:50%; text-align:right;padding-right:10px;">
+        {{this.data.h1}}
+      </hbox>
+
+      <hbox class="hbox finder-item" style="width:50%;padding-left:10px; border-left: 2pt solid blue;">
+
+        <form class="js-item" name="{{this.xid}}" data="{{@index}}">
+          <button class="js-edit sammy-nowrap-2"
+          style="flex-grow:1; text-align:left; color:#03008e;
+          font-weight:bold; font-size:11pt;"
+          type="submit" name="preview" title="{{this.xid}}" data="{{@index}}"
+          >{{this.path}}.{{this.xid}}</button>
+        </form>
+      </hbox>
+    </hbox>
+    {{/each}}
+    --}}
+
+
+    {{#each items}}
+    {{#if this.o}}
+    <hbox class="hbox-ql finder-item" style="">
+      <input type="checkbox" name="" value="">
+
+      <button type="button" data="{{this.o.xid}}"
+      class="js-edit -sammy-nowrap-2"
+      style="color:#03008e;
+      font-weight:bold; font-size:11pt; line-height:20pt;"
+      title="{{this.o.xid}}"
+      >{{this.o.xid}}</button>
+      &ensp;&mdash;&ensp;
+      <span style="font-family:cursive; font-size:11pt;">
+        {{this.o.data.h1}}
+      </span>
+    </hbox>
+    {{else}}
+    <hbox class="hbox-ql finder-subpath" style="">
+      <input type="checkbox" name="" value="">
+      <button type="button" data="{{this.path}}"
+      class="js-subpath -sammy-nowrap-2"
+      style="color:#038e00; font-weight:bold; font-size:11pt; line-height:20pt;"
+      title="{{this.xid}}"
+      >{{this.path}}</button>
+      &ensp;&mdash;&ensp;
+        DIRECTORY
+    </hbox>
+    {{/if}}
+    {{/each}}
+
+
+
+  </vbox>
+
+
+</vbox>
+</template>

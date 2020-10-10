@@ -7,7 +7,7 @@ const yaml = require('js-yaml')
 
 const {parse_s3filename} = require('../../shared/utils.js')
 
-const endpoint='us-east-1.linodeobjects.com'
+const endpoint='https://us-east-1.linodeobjects.com'
 
 
 
@@ -49,6 +49,8 @@ function s3connect(env={}) {
               endpoint,
               s3ForcePathStyle: true, // needed with minio?
               signatureVersion: 'v4',
+//              region:'default',
+//              http_continue_timeout: 0 //# disable 'expect: 100-continue'
     });
 
 
@@ -233,7 +235,7 @@ function content_type(fn) {
 
 
 async function putObject(...p1) {
-  const verbose =0;
+  const verbose =1;
   // p1 is an array.
 
   //console.log(`@239 `,{p1})
@@ -267,6 +269,7 @@ async function putObject(...p1) {
     }
 
     p1.Body = p1.Body || p1.data;
+    delete p1.data;
     return p1;
   }
 
@@ -289,7 +292,7 @@ async function putObject(...p1) {
 
   assert(p1.Body)
 
-  p1 = Object.assign({
+  p1 = Object.assign({ // pre conditions
     ACL: 'public-read',
     ContentType: content_type(p1.Key), // automatic
     ContentEncoding: 'utf8',
@@ -354,11 +357,13 @@ async function readdir_chunk(p1) {
 }
 
 async function readdir_nofix(p1) {
-  const verbose =0;
+  const verbose =1;
 
   ;(verbose >0) && console.log(`@319 Entering readdir_nofix `,{p1})
 
   const {Bucket, Prefix, Delimiter} = p1;
+  assert(p1.Bucket)
+  // assert(p1.Prefix) it's Ok to dir s3://caltek
 
 //  const pi = Object.assign({},{Bucket, Prefix, Delimiter})
   const CommonPrefixes =[];
@@ -777,7 +782,7 @@ async function deleteObjects(p1) {
 
 
 async function headObject(p1) {
-  const verbose =1;
+  const verbose =0;
   if (typeof p1 == 'string') {
     p1 = parse_s3filename(p1)
   }

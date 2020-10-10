@@ -169,14 +169,14 @@ function extract_metadata(s) {
 ;(()=>{
   const head = 'title: a-title';
   const {meta, md, error} = extract_metadata(`---\n${head}\n---\n# headline`)
-  console.log(`@43 `,{meta},{md},{error})
+  console.log(`@43 testing `,{meta},{md},{error})
   assert(! error);
 })();
 
 ;(()=>{
   const head = 'title: a-title';
   const {meta, md, error} = extract_metadata(`---\n${head}\n---\n# headline\n --- \n`)
-  console.log(`@50 `,{meta},{md},{error})
+  console.log(`@50 testing `,{meta},{md},{error})
   console.assert(!error, {meta},{md},{error})
   assert(! error);
 })();
@@ -302,7 +302,7 @@ function extract_xid2(s3fn) {
   assert((Bucket == 'blueink'),s3path)
   assert(subsite == 'ya14',s3path)
   assert(xid == '1202-Y3K2',s3path)
-  console.log(`@110 [${module.id}] test passed <${s3path}>`)
+  console.log(`@110 testing  [${module.id}] test passed <${s3path}>`)
 })();
 
 (()=>{
@@ -311,7 +311,7 @@ function extract_xid2(s3fn) {
   assert((Bucket == 'blueink'),s3path)
   assert(subsite == 'np/ya14',s3path)
   assert(xid == '1202-Y3K2',s3path)
-  console.log(`@110 [${module.id}] test passed <${s3path}>`)
+  console.log(`@110 testing  [${module.id}] test passed <${s3path}>`)
 })();
 
 (()=>{
@@ -320,7 +320,7 @@ function extract_xid2(s3fn) {
   assert(Bucket == 'abatros',s3path)
   assert(subsite == 'project/dkz',s3path)
   assert(xid == '227-editora-intro',s3path)
-  console.log(`@120 [${module.id}] test passed <${s3path}>`)
+  console.log(`@120 testing  [${module.id}] test passed <${s3path}>`)
 })();
 
 (()=>{
@@ -329,7 +329,7 @@ function extract_xid2(s3fn) {
   assert(Bucket == 'abatros',s3path)
   assert(subsite == 'project/dkz',s3path)
   assert(xid == null,s3path)
-  console.log(`@181 [${module.id}] test passed <${s3path}>`)
+  console.log(`@181 testing  [${module.id}] test passed <${s3path}>`)
 })();
 
 (()=>{
@@ -338,7 +338,7 @@ function extract_xid2(s3fn) {
   assert(Bucket == 'abatros',s3path)
   assert(subsite == 'project',s3path)
   assert(xid == null,s3path)
-  console.log(`@181 [${module.id}] test passed <${s3path}>`)
+  console.log(`@181 testing  [${module.id}] test passed <${s3path}>`)
 })();
 
 
@@ -349,7 +349,7 @@ function extract_xid2(s3fn) {
   assert(subsite == 'yellow',s3path)
   assert(xid == null,s3path)
   assert(fn == '.publish.yaml',fn)
-  console.log(`@200 [${module.id}] test passed <${s3path}>`)
+  console.log(`@200  testing [${module.id}] test passed <${s3path}>`)
 })();
 
 // -----------------------------------------------------------------------

@@ -215,6 +215,7 @@ async function publish_article(cmd) {
     ******************************************************************/
 
     async function write_html() {
+      const verbose =1;
       const {dir,name} = path.parse(Key)
 //        const html_fn = path.join(Bucket,dir,name,'index.html')
       const html_fn = path.join(Bucket,dir,name)
@@ -222,12 +223,17 @@ async function publish_article(cmd) {
       ;(verbose >0) && console.log(`-------------------\n@290 writing-html on <s3://${html_fn}>...`)
 
       //utils.putObject({s3_url:html_fn, data:html}); // MD-code
-      const retv3 = await s3.putObject({
-        s3_url:html_fn,
-        data:html,
+
+      const p = {
+        Bucket,
+        Key: path.join(dir,name),
         ContentType: 'text/html;charset=utf8', // because no extension
         ACL: 'public-read'
-      })
+      };
+
+      ;(verbose >0) && console.log(`@289 write html `,p)
+
+      const retv3 = await s3.putObject(Object.assign(p,{data:html}))
       ;(verbose >=0) && console.log(`@290 writing <${html_fn}> ETag:<${retv3.ETag}>`)
     }
 

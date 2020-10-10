@@ -3,18 +3,23 @@
   <style media="screen">
     .right-panel-btn {
       text-align: center;
-      border: 3px solid lightgray;
+      border: 2px solid lightgray;
       width:100px;
       padding: 4px 0px;
       cursor: pointer;
     }
     .right-panel-btn:hover {
-      _border: 3px solid #88ffde;
+      _border: 2px solid #88ffde;
+      color:#88ffde;
+    }
+
+    div.right-panel-btn:hover {
+      border: 2px solid #88ffde;
       color:#88ffde;
     }
 
     div.right-panel-btn.active {
-      border: 3px solid #88ffde;
+      border: 2px solid #88ffde;
       color:#88ffde;
     }
   </style>
@@ -22,12 +27,31 @@
 
 <template name="right_panel_header">
 
-<div class="hbox space-evenly" style="width:100%;">
-  {{> right_panel_btn name="info"}}
-  {{> right_panel_btn name="preview"}}
-  {{> right_panel_btn name="directory"}}
-  {{> right_panel_btn name="deep-search"}}
-</div>
+<hbox class=""
+style="background-color:#b7b7b7; width:100%; justify-content:center; padding:3px;">
+  <div class="hbox space-evenly" style="width:600px;">
+    {{#if allowed 'edit'}}
+    {{> right_panel_btn name="edit"}}
+    {{/if}}
+
+    {{#if allowed 'info'}}
+    {{> right_panel_btn name="info"}}
+    {{/if}}
+
+    {{#if allowed 'dir3'}}
+    {{> right_panel_btn name="dir3"}}
+    {{/if}}
+
+    {{#if allowed 'deep-search'}}
+    {{> right_panel_btn name="deep-search"}}
+    {{/if}}
+
+    {{#if allowed 'find'}}
+    {{> right_panel_btn name="find"}}
+    {{/if}}
+
+  </div>
+</hbox>
 </template>
 
 <template name="right_panel_btn">

@@ -12,6 +12,8 @@ import './user-admin/user-admin.js'
 import './welcome/welcome.js'
 import './btests/btests.js'
 
+const verbose =1;
+
 BlazeLayout.setRoot('body');
 
 Template.registerHelper('session', function (varName) {
@@ -51,7 +53,13 @@ Tracker.autorun(function () {
   }
 })
 
+
 // -------------------------------------------------------------------------
+
+Template.registerHelper('panel', function(x) {
+  return (Session.get('panel') == x);
+});
+
 
 Template.registerHelper('fileName_or_url', function() {
   let s3fn = Session.get('s3-url')
@@ -70,7 +78,7 @@ Template.registerHelper('fileName_or_url', function() {
 // --------------------------------------------------------------------------
 
 function isNotLoggedIn(context, redirect) {
-  console.log(`@73 userId:<>`)
+  ;(verbose >0) && console.log(`@73 userId:<${Session.get('userId')}>`)
   let userId = Session.get('userId')
   if (!userId) {
     userId = localStorage.getItem('userId'); // last logged-in
@@ -80,7 +88,7 @@ function isNotLoggedIn(context, redirect) {
         redirect('/login');
     }*/
 
-  console.log(`@82 userId:<${userId}>`,{userId})
+  ;(verbose >0) && console.log(`@82 found in localStorage userId:<${userId}>`,{userId})
 
   if (!userId || userId == "null") {
     console.log(`@85 `,FlowRouter.current())
@@ -90,13 +98,16 @@ function isNotLoggedIn(context, redirect) {
     redirect('/welcome')
   }
 
-  Session.set('userId',userId);
+  Session.set('userId',userId); // that will trigger reading user-profile
 
-}
+
+} // isNotLoggedIn
+
+
 
 FlowRouter.triggers.enter([
   function(context,redirect) {
-    console.log(`@95 userId:<>`)
+    console.log(`@95 triggerEnter userId:<${Session.get('userId')}>`)
   },
   isNotLoggedIn
 ],{

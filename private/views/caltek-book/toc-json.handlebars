@@ -1,0 +1,11 @@
+<script id="template-toc" type="text/x-handlebars-template">
+{{#each toc}}
+<div class="directory-entry">
+  <a href="/caltek/books/101-dont-go-where/{{this}}" title="{{this}}">{{this}}</a>
+  &emsp;
+  <a href="./{{this}}.pdf">[ pdf ]</a>
+  <button type="button" onclick="go_pdf('/caltek/books/101-dont-go-where/{{this}}.pdf')"> PDF </button>
+</div>
+{{/each}}
+
+</script>

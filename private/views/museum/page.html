@@ -135,7 +135,7 @@ a.click-ici:hover {
           {{#if it.data.reserved}}
           [image reserve]
           {{else}}
-          <img src="https://ultimheat.com/s3-museum/{{it.data.pic}}.jpg"
+          <img src="{{href_jpeg}}/{{it.data.pic}}.jpg"
             style="max-height:500px;">
           {{/if}}
           {{/if}}
@@ -230,13 +230,13 @@ a.click-ici:hover {
     <div class="qc">
     {{#each pdf in it.data.links}}
     <div class="pdf inb">
-      <img class="pdf-logo1" src="http://www.ultimheat.com/pdf_logo.jpg">
+      <img class="pdf-logo1" src="http://ultimheat.com/pdf_logo.jpg">
       {{#if it.data.reserved}}
       <a href="#" target='_blank'>
         PDF <span class="pdf-data" style="font-weight:300;">{{pdf.com}} page(s) (Non communicable)</span>
       </a>
       {{else}}
-      <a href="https://ultimheat.com/s3-museum/{{pdf.fn}}.pdf" target='_blank'>
+      <a href="{{href_pdf}}/{{pdf.fn}}.pdf" target='_blank'>
         PDF <span class="pdf-data" style="font-weight:300;">{{part @index}}{{pdf.com}} page(s)</span>
       </a>
       {{/if}}

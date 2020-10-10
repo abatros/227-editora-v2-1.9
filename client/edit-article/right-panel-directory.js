@@ -4,7 +4,7 @@ import path from 'path';
 import assert from 'assert';
 import {parse_s3filename} from '/shared/utils.js'
 
-const verbose =0;
+const verbose =1;
 const TP = Template.right_panel_directory;
 
 const allowed_buckets = new ReactiveVar();
@@ -18,18 +18,111 @@ const allowed_buckets = new ReactiveVar();
 */
 
 
-const cwd = new ReactiveArray(); // set by autorun.
+const dir3list = new ReactiveArray(); // set by autorun.
 
+
+let _mrw = null
+let _mrp = null
 
 Tracker.autorun(function(){
   const verbose =1;
   let cwd_ = Session.get('workspace');
+  const user_profile = Session.get('user-profile');
+
+  console.log(`@32 LOOP
+    workspace <${_mrw}><${cwd_}>`);
+
+  console.log(`@32 LOOP user-profile(-1)`,_mrp);
+  console.log(`@32 LOOP user-profile`,user_profile);
+
+  _mrw = cwd_;
+  _mrp = user_profile;
+
+
   if (!cwd_) {
     // clear sdir
     return;
   }
 
-  ;(verbose >0) && console.log(`>>> @15 AUTORUN @directory-panel <${cwd_}>`)
+  if (!user_profile) return;
+
+//  assert(p, '@39 missing user-profile')
+
+  const wslist = user_profile.subsites; //Session.get('workspaces');
+
+
+  ;(verbose >0) && console.log(`>>> @15 AUTORUN @dir3-panel <${cwd_}>`)
+
+  /*****************************************
+    step 1 : remove ext if any and RETRY.
+  ******************************************/
+
+  assert(!cwd_.startsWith('s3:/'));
+
+  /*****************************************************************
+
+  DO NOT REMOVE ending [/]
+  we need to query partial directories like:
+
+    s3://museum/pages/19 => for 20th century !!!!!
+
+  ******************************************************************/
+
+
+  if (false && cwd_.endsWith('/')) {
+    cwd_ = cwd_.slice(0,-1);
+    console.warn(`@41 workspace requested ends with '/' removed.`)
+  }
+
+
+  const {dir,name,base,ext} = path.parse(cwd_);
+  if (ext) {
+    console.warn(`@41 ALERT in [${module.id}]
+      workspace <${cwd_}>
+      dir:<${dir}> base:<${base}>
+      name:<${name}> ext:<${ext}>
+      `)
+
+throw 'fatal@47'
+    Session.set('workspace',dir)
+    return;
+  }
+
+
+  /*****************************************
+    step 2 : ADJUST workspace
+  ******************************************/
+
+  if (wslist) {
+    console.log(`>>>>>>>>>>>>>`,wslist)
+    for (let j in wslist) {
+      const ws1 = wslist[j]
+      if (cwd_.indexOf(ws1)==0) { // ok
+        console.log(`@48 <${ws1}><${cwd_}> ACCEPTED`)
+        break; // cwd child of ws1
+      }
+      if (ws1 == cwd_) {
+        console.log(`@49 <${ws1}><${cwd_}> ACCEPTED`)
+        break;
+      }
+      if (ws1.indexOf(cwd_)==0) {
+        // cwd_ shorter than ws1 => ADJUST workspace
+        console.log(`@50 <${ws1}><${cwd_}> REJECTED new workspace:<${ws1}>`)
+        ;(verbose >=0) && console.log(`@85 workspace:=<${ws1}>`)
+throw 'break@102'
+//        Session.set('workspace',ws1)
+        return;
+      }
+      // last iteration and not found.
+      if (j+1 == wslist.length) {
+        console.log(`@51 <${ws1}><${cwd_}> REJECTED new workspace:<${wslist[0]}>`)
+        ;(verbose >=0) && console.log(`@92 workspace:=<${wslist[0]}>`)
+throw 'break@110'
+//        Session.set('workspace',wslist[0])
+        return;
+      }
+    } // loop
+  }
 
   /*****************************************
 
@@ -37,9 +130,6 @@ Tracker.autorun(function(){
 
   ******************************************/
 
-  if (false) {
-    if (!cwd_.endsWith('/')) cwd_ += '/';
-  }
 
   Meteor.call('list-s3objects', cwd_, (err,data) =>{
     if (err) {
@@ -51,27 +141,7 @@ Tracker.autorun(function(){
       return;
     }
 
-    /**************************
-    const h = data.h;
-    ;(verbose >0) && console.log(`@42 data.h `,{h})
-
-
-          reformat {fname, o:{md:true,d:true,o:true}}
-          into
-          {fname, md:'md', d:'dir', o:'object'}
-
-
-    const h_ = h.map(it => {
-      const {fname, o} = it;
-      return {
-        fname,
-        md: (o.md)?'md-file':null,
-        d: (o.d)?'dir-entry':null,
-      }
-    })
-    ******************/
-
-    console.log(data)
+    console.log(`@134 list-s3Objects<${cwd_}> => `,data);
 
     /*********************************
 
@@ -88,53 +158,27 @@ Tracker.autorun(function(){
     })
 
 
-
-    console.log(`>>> directory-panel::autorun <${cwd_}> ${h_.length} items`)
-
-    cwd.splice(0,9999) // reactive var
-    cwd.push(...h_);
+    console.log(`>>> dir3-panel::autorun <${cwd_}> ${h_.length} items`)
+    dir3list.splice(0,9999) // reactive var
+    dir3list.push(...h_);
   })
 
 }) // autorun
 
 // --------------------------------------------------------------------------
 
-function display_using_hash_Obsolete(data) {
-
-  const h = data.h; // it's an array [key,{o:true,d:false}]
-//  console.log(`@102 before sorting:`,h)
-  const h2 = h.sort(); // maybe no need
-//  console.log(`@102 sorted:`,h2)
-
-  /*
-      here we can have both md-file and directory!!!
-  */
-
-  const list = h2.map(it =>{
-    const [key,{o,d}] = it;
-    const retv = {Key:o, Prefix:d, name:key}
-    ;(verbose >0) && console.log(`@111 it:`,retv)
-    return retv;
-  })
-
-  ;(verbose >0) && console.log(`@42 autorun::list-md-files (${list.length})`)
-
-  cwd.splice(0,9999) // reactive var cleanup.
-  cwd.push(...list);
-
-}
-
-
 
 // ---------------------------------------------------------------------------
 
 TP.onCreated(function(){
+  console.log(`dir3-panel.onCreated`)
   const tp = this;
+  ;(verbose >0) && console.log(`dir3-panel.onCreated`)
 })
 
 TP.onRendered(function(){
   const tp = this;
-  ;(verbose >0) && console.log(`> onRendered right-panel-directory`)
+  ;(verbose >0) && console.log(`dir3-panel.onRendered`)
   const input = tp.find('input');
 })
 
@@ -160,6 +204,7 @@ TP.events({
     tp.s3dir = s3fn; // could be reactive...
     ;(verbose >0) && console.log(`@109 directory for <${s3fn}>`) // div.directory-item
     ;(verbose >0) && console.log(`@131 session.workspace:=(${s3fn})`) // div.directory-item
+    ;(verbose >=0) && console.log(`@230 workspace:=<${s3fn}>`)
     Session.set('workspace', s3fn)
 
     /*
@@ -252,6 +297,7 @@ TP.events({
         assert(s3fn)
         ;(verbose >0) && console.log(`@177 Session.set('s3-url') <${s3fn}>`)
         Session.set('s3-url',s3fn)
+        Session.set('panel','showing-edit-panel')
         return;
       }
 
@@ -278,6 +324,7 @@ TP.events({
     const s3fn_ = path.join(Bucket, dir+'/'); // <= !!!!!!!! possiby null
     ;(verbose >0) && console.log(`@319 click .js-directory-up workspace := <${s3fn_}>`)
     ;(verbose >0) && console.log(`@192 session.workspace:=(${s3fn_})`) // div.directory-item
+    ;(verbose >=0) && console.log(`@350 workspace:=<${s3fn_}>`)
     Session.set('workspace', s3fn_); // => autorun.
   },
   'click .js-directory-mode': (e,tp)=>{
@@ -289,8 +336,9 @@ TP.events({
 
 TP.helpers({
   sdir: ()=>{
+//return;
 //    return sdir && sdir.list(); // reactive
-    const x = cwd && cwd.list(); // reactive
+    const x = dir3list && dir3list.list(); // reactive
     let y = x.array();
     ;(verbose >0) && console.log({y})
     const show_all = Session.get('full-directory-mode');

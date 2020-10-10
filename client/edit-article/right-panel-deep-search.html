@@ -3,16 +3,34 @@
     div.fragments em {
       color:#8e4900;font-weight:bold;
     }
+    #deep-search-panel input::placeholder {
+      color:orange;
+    }
   </style>
 </head>
 
 <template name="right_panel_deep_search">
-<div class="hbox qc" style="padding:5px 0px;">
-  <form class="js-lookup">
-  <input type="text" name="query"
-  style="height:20pt; width:300pt; font-weight:bold; font-size:12pt; font-family:arial;">
+<vbox id="deep-search-panel"
+class="a-panel hidden"
+  style="width:700px; border:3px solid lightgreen; margin:0px;
+  _height:100%; height:100vh;
+  position:absolute;
+">
+
+
+{{> right_panel_header}}
+
+
+<div class="hbox-qc" style="padding: 5px 20px; background-color:#e6e6b6; margin-bottom:0px; margin-top:3px;">
+  {{session 'search-path'}}
+</div>
+
+<div class="hbox-qc" style="padding:5px 0px;">
+  <form class="js-search">
+  <input type="text" name="query" placeholder="enter your query here"
+    style="height:20pt; color:green; width:300pt; font-weight:bold; font-size:12pt; font-family:arial;">
   <button type="submit"
-  style="padding-left:10px;font-size:14pt;"
+    style="padding-left:10px;font-size:14pt;"
   ><i class="fa fa-arrow-right"></i></button>
   <input type="checkbox" name="preview-or-edit"> preview
   </form>
@@ -21,7 +39,7 @@
 <vbox style="
     overflow-y:auto;
     flex-grow:1;
-    border: 3px solid orange;
+    _border: 3px solid orange;
     font-family:monospace; font-size:9pt; line-height:12pt; padding:5px;
     ">
 
@@ -43,4 +61,5 @@
   {{/each}}
 </vbox>
 
+</vbox>
 </template>

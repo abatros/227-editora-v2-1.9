@@ -39,10 +39,11 @@ TP.events({
       return;
     }
 
-    localStorage.setItem('userId',userId); // user logged-in.
+    localStorage.setItem('userId',userId); // will fetch user-profile.
+    Session.set('userId',userId)
+return;
 
-
-    Meteor.call('get-user-config', userId, (err,data) =>{
+    Meteor.call('user-profile', userId, (err,data) =>{
       if (err) {alert(tp, 'sys-'+err); return;}
       if (!data) {alert(tp, 'no-data'); return;}
       if (data.error) {alert(tp, data.error); return;}
@@ -60,8 +61,15 @@ TP.events({
         tp.data.err_message.set('Insuficient privileges.<br>Please ask your admin to allow subsite access')
         return;
       }
+
+      data.user_config.subsites = subsites;
+
       Session.set('userId',userId);
       Session.set('workspaces', subsites);
+      ;(verbose >=0) && console.log(`@58 user-profile:=`, data.user_config)
+      Session.set('user-profile', data.user_config);
+      Session.set('search-path', data.user_config.path);
+
       const next = Session.get('requested-target');
       if (next) {
         console.log({next})
@@ -135,6 +143,7 @@ async function sign_Up(tp, params) {
       ****************************************/
 
       Session.set('userId',user.userId);
+      ;(verbose >=0) && console.log(`@146 user-profile:=`, data.data)
       Session.set('user-profile', data.data);
 
       /***************************************
@@ -218,6 +227,7 @@ return;
 FlowRouter.route('/zero', {name:'editora-zero',
   action: function(params, queryParams){
     localStorage.clear();
+    Session.set('userId',null);
     FlowRouter.go('welcome')
 //    BlazeLayout.render('welcome');
   }
@@ -226,6 +236,7 @@ FlowRouter.route('/zero', {name:'editora-zero',
 FlowRouter.route('/logout', {name:'editora-logout',
   action: function(params, queryParams){
     localStorage.setItem('userId',null);
+    Session.set('userId',null);
     FlowRouter.go('welcome')
 //    BlazeLayout.render('welcome');
   }
