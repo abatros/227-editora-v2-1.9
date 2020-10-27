@@ -357,7 +357,7 @@ async function readdir_chunk(p1) {
 }
 
 async function readdir_nofix(p1) {
-  const verbose =1;
+  const verbose =0;
 
   ;(verbose >0) && console.log(`@319 Entering readdir_nofix `,{p1})
 
@@ -797,8 +797,8 @@ async function headObject(p1) {
   (verbose >0) && console.log(`@775 headObject params:`,p1)
 
   return new Promise((resolve,reject)=>{
-    assert(p1.Bucket)
-    assert(p1.Key)
+    assert(Bucket)
+    assert(Key)
     _s3client.headObject(p1, (error,data)=>{
       if (error) {
 //        console.log(`@281 `,{error})
@@ -806,7 +806,7 @@ async function headObject(p1) {
         return;
       }
 //      console.log(`@112: `, data.getCommonPrefixes())
-      resolve(data)
+      resolve(Object.assign(data,{Bucket,Key}))
     })
   })
 } // headObject

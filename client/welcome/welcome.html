@@ -32,6 +32,10 @@
        Welcome to Editora/s3
     </div>
 
+    <div class="hbox-qc">
+      {{session 'userId'}}
+    </div>
+
 
     {{#if session 'userId'}}
 
@@ -41,10 +45,16 @@
     background-color: yellow;
     align-items:center;
     ">
+
+    {{#if session 'workspaces'}}
     <h3>Enter a workspace</h3>
     {{#each ws in session 'workspaces'}}
       <button type="button" name="{{ws}}" class="js-select-workspace">{{ws}}</button>
     {{/each}}
+    {{else}}
+    <p>Could not find any workspace for user: "{{session 'userId'}}"</p>
+    <p>Please contact your Administrator</p>
+    {{/if}}
     </div>
 
     {{else}}

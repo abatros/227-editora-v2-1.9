@@ -10,389 +10,198 @@ const s3 = require('../server/lib/aws-s3.js')();
 const {parse_s3filename, extract_metadata} = require('../shared/utils.js')
 const util = require('util')
 const stream = require('stream')
-const pipeline = util.promisify(stream.pipeline);
 
-const ts =     new Readable();
-      ts.push('---\nfn: abc.txt\n---\n');
-//      .push('\\input style-sheet.tex ')
-//      .push('\\hOne{My-headline} ')
-//      .push('my text here...\\bye\\end')
-      ts.push('\n# My-first headline  \n voici du texte...')
-      ts.push(null);
 
+const md_fname = 's3://caltek/books/101-dont-go-where/112-chapter-12.md'
+const {Bucket, Key} = parse_s3filename(md_fname)
+
+main();
 
 async function main() {
-  await pipeline(
-    s3.__s3client.getObject({
-      Bucket: 'caltek',
-      Key: 'books/101-dont-go-where/101-chapter-1.md'
-    }).createReadStream(),
+  const {data:stylesheet, LastModified} = await s3.getObject('s3://caltek/books/101-dont-go-where/style-sheet.tex')
+  if (!LastModified) throw 'fatal@19'
 
-    /***
-    ts,
-    ***/
+  const tex = await get_tex(md_fname)
 
-    async function* (source) {
-      source.setEncoding('utf8');  // Work with strings rather than `Buffer`s.
-      for await (const chunk of source) {
-        yield chunk;
-      }
-    },
+  console.log(tex)
 
-    /**************************
-    async function* (source) {
-//      source.setEncoding('utf8');  // Work with strings rather than `Buffer`s.
-      for await (const chunk of source) {
-        yield chunk.toLowerCase();
-      }
-    },
-    *********************/
-
-    async function* (source) {
-      let state_ = {lineNo:0};
-
-      for await (const chunk of source) {
-        const {state, data} = md2tex(chunk,state_)
-//        state_ = state;
-        //console.log(`\n@41 lineNo:${state_.lineNo}\n`)
-        //console.log(`\n------------------\n@57 text:`,data)
-        yield data;
-      }
-
-      //console.log(`\n@45 lineNo:${state_.lineNo}\n`)
-      console.log(`\n------------------\n@48 metadata`,state_.metadata_saved)
-    },
-
-
-
-    process.stdout
-//    fs.createWriteStream('uppercase.txt')
-//    pipe(process.stdout)
-  )
-
-//  s1.pipe(process.stdout)
 /*
-  // or 'close'
-  .on('end', function(){
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> done@18')
-  }); */
+  const s1 = s3.__s3client.getObject({
+    Bucket: 'caltek',
+    Key: 'books/101-dont-go-where/style-sheet.tex'
+  }).createReadStream();
+
+  const s2 = s3.__s3client.getObject({
+    Bucket: 'caltek',
+    Key: 'books/101-dont-go-where/102-chapter-2.md'
+  }).createReadStream();
+*/
 
 
-
-}
-
-
-function md2tex(in_, state) {
-  const verbose =0;
-  const out =[];
-
-  function quit_metadata_mode() {
-    ;(verbose >0) &&console.log(`@85 metadata quit metadata:`,yaml.safeLoad(state.metadata.join('').replace(/\t/g,'   ')))
-    // quit metadata mode
-    state.metadata_saved = state.metadata_saved || [];
-    state.metadata_saved .push(state.metadata.join(''));
-    state.metadata = null;
-    state.metadata_tail = null;
-    state.mode = 'mid-line' // we did not reach \n
-    state.acc =null;
-  }
-
-  function every_headline() {
-    const h = state.acc.join('')
-    console.log(`@85 every_headline =>`, h)
-    if (state.acc[0] == '#') {
-      out.push(`\\h1{${h.substring(2)}}\n`)
-    }
-    state.acc = null;
-  }
-
-  function enter_mid_line() {
-    state.mode = 'mid-line';
-    state.acc =null;
-  }
-
-  function every_new_line() {
-    switch (state.mode) {
-      case 'scanning-entity':
-      console.error(`@96 new-line before closing entity (${state.acc})`)
-      break;
-
-      case 'tagIn':
-      console.error(`@97 new-line before closing tagIn (${state.acc})`)
-      break;
-
-      case 'tagOut':
-      console.error(`@96 new-line before closing tagOut (${state.acc})`)
-      break;
-
-      case 'headline':
-      console.log(`@108 every_scan_line =>`, acc.join(''))
-      console.log(`@109 process =>`, acc.join(''))
-      every_headline();
-      state.mode = 'new-line'
-      break;
-
-      default:
-      state.mode = 'new-line'
-    }
-  }
+  const s = new Readable();
+  s.push(stylesheet)
+  s.push(tex)
+  s.push('\\bye\\end ')
+  s.push(null)
 
 
-  for (let i=0; i<(in_.length)&&(300); i++) {
-    const cc = in_.charAt(i);
+  const pdftex = spawn('pdftex',['-output-directory=.','-jobname=xyz', '\\relax '])
 
-    ;(verbose >1) &&console.log(`@122 getNext=> (${cc}) mode:<${state.mode}>`)
-
-    if (state.mode == 'metadata') {
-      // take everything until \n----
-      // this is similar to HTML tag .... except...
-      switch (cc) {
-        case '\n':
-        if (state.metadata_tail && (state.metadata_tail.length >=2)) {
-          quit_metadata_mode()
-          continue;
-        }
-
-        state.metadata_tail = [];
-        //console.log(`@79 new-line in metadata `,state.metadata.join(''))
-        state.metadata.push(cc);
-        continue;
-
-        case '-':
-          if (state.metadata_tail) {
-            state.metadata_tail.push(cc);
-            //console.log(`@85 another dash in metadata (${state.metadata_tail.join('')}) `,state.metadata.join(''))
-          } else {
-            state.metadata.push(cc);
-          }
-          continue;
-
-        default:
-          // here not - and not \n:
-          if (state.metadata_tail && (state.metadata_tail.length >=2)) {
-            quit_metadata_mode()
-            continue;
-          }
-          if (state.metadata_tail) {
-            //console.log(`@100 metadata (${cc}) tail:(${state.metadata_tail.join('')}) continue metadata`)
-            // restore
-            // only 1 !!!!
-            state.metadata.push(...state.metadata_tail)
-            state.metadata_tail = null;
-          }
-          //console.log(`@106 metadata (${cc})`)
-          state.metadata_tail = null;
-          state.metadata.push(cc);
-      } // switch
-      continue;
-    } // metadata mode
-
-
-    // intercept # (everything starting a line.)
-    // \n### \n> \n. (dot) something They all end with space or \n
-
-    //if
-
-
-    if (state.mode == 'scanning-entity') {
-      // we are expecting a ';'
-      if (cc == ';') {
-        out.push(...(entity2tex(state.entity)));
-        state.entity = null;
-        state.mode = 'mid-line'
-      } else {
-        state.entity.push(cc)
-      }
-      continue;
-    }
-
-
-    if (state.mode == 'tagOut') {
-      if (cc == '>') {
-        ;(verbose >0) &&console.log(`@88 tagOut:`,state.tagOut.join(''))
-        ;(verbose >0) &&console.log(`@88 tagIn:`,state.tagIn.join(''))
-        ;(verbose >0) &&console.log(`@89 leaving tagOut with tagContent:`,state.tagContent.join(''))
-        state.tagIn = null;
-        state.tagContent = null;
-        state.tagOut = null;
-        // check tagIn == tagOut then decide what to do...
-        // here ignore,
-        state.mode = 'mid-line'
-      } else {
-        state.tagOut.push(cc)
-      }
-      continue;
-    }
-
-
-    if (state.mode == 'tagContent') {
-      assert(state.tagContent)
-      // accumulate until until '</' is found.
-      if (cc == '<') {
-        ;(verbose >0) &&console.log(`@101 tagContent:`,state.tagContent.join(''))
-        state.tagOut = [];
-        state.mode = 'tagOut'
-      } else {
-        state.tagContent.push(cc)
-      }
-      continue;
-    }
-
-    if (state.mode == 'tagIn') {
-      if (cc == '>') {
-        ;(verbose >0) &&console.log(`@111 `,state.tagIn.join(''));
-//        state.tagIn = null; don't close
-        state.tagContent = [];
-        state.mode = 'tagContent'
-      } else {
-        state.tagIn.push(cc)
-      }
-      continue;
-    }
-
-    state.mode = state.mode || 'new-line';
-
-    switch(state.mode) {
-      case 'headline': // accumulate until end of line
-      if (cc == '\n') {
-        every_headline();
-        state.mode = 'new-line'
-      } else {
-        state.acc.push(cc)
-      }
-      continue;
-    }
-
-
-    if (state.mode == 'new-line') {
-      switch (cc) {
-        case '#' :
-        state.mode = 'headline';
-//        state.acc_type: 'headline';
-        state.acc = ['#'];
-        continue;
-
-        case '-' :
-        state.acc = state.acc || [];
-        state.acc.push('-')
-        continue; // stay in new-line.
-      } // switch
-
-
-      // get into mid-line or ????
-
-      assert(cc != '-');
-
-      if (state.acc && (state.acc.length >=3)) {
-        assert(cc != '-');
-        assert(state.mode == 'new-line')
-        // enter_metadata
-        state.mode = "metadata"
-        state.metadata = [];
-        ;(verbose >0) &&console.log(`@173 switch to mode METADATA (${state.acc.length})`)
-        continue;
-      }
-
-      if (state.acc) {
-        assert(cc != '-');
-        assert(state.mode == 'new-line')
-        assert((state.acc.length <3)) // cound be (<2)
-        // false alert - restore
-        out.push(...state.acc.join(''));
-        state.acc = null;
-        enter_mid_line()
-        continue;
-      }
-
-      out.push(cc)
-      state.mode = 'mid-line';
-      continue;
-    } // new-line
-
-    switch(cc) {
-      //case 'o': out.push('O'); break;
-
-      case '&': // enter mode token
-//        state.mode = 'token' // maybe state.token is enough.
-//        state.entity = ['&'];
-        state.entity = ['&']; // do not use acc here - could already be used for headline
-        state.mode = 'scanning-entity';
-        break;
-
-      case '<': // enter TAG mode
-  //        state.mode = 'token' // maybe state.token is enough.
-        state.tagIn = []; // not null.
-        state.mode = 'tagIn'
-        break;
-
-      case '\n': state.lineNo ++; // NO break
-        out.push(cc);
-        every_new_line();
-        break;
-
-      default:
-      out.push(cc);
-    }
-  }
-  return {data:out.join(''),state}
-} // md2tex
-
-
-function entity2tex(entity) {
-  assert(entity[0]=='&')
-  entity.splice(0,1);
-//  const csname = `\\${entity.splice(0,1).join('')} `
-  const csname = `\\${entity.join('')} `
-  //console.log(`@104 csname:<${csname}>`)
-  return csname;
-}
-
-function md2tex_(md) {
-  const tex = md.replace(/\# (.*)\n/,`\\h1{$1}`)
-        .replace(/\&ndash;/g,'\\endash ')
-        .replace(/\&mdash;/g,'\\emdash ')
-        .replace(/\&ensp;/g,'\\ensp ')
-        .replace(/\&emsp;/g,'\\emsp ')
-        .replace(/<iframe[^<]*<\/iframe>/,'')
-  return tex;
-}
-
-
-main().catch(console.error);
-
-return;
-
-const s = new Readable();
-//const s = Readable.from(["Hello Dolly\\bye\\end"])
-
-//s._read = () => {}; // redundant? see update below
-s.push('\\ Hello Dolly.');
-s.push('\\input style-sheet.tex ');
-s.push('\\hOne{My-headline} ');
-s.push('my text here...\\bye\\end');
-s.push(null);
-
-
-const pdftex = spawn('pdftex')
-
-pdftex.stdout.on('data', (data) => {
-  console.log(`@18 stdout: ${data}`);
-});
-
-pdftex.stderr.on('data', (data) => {
-  console.error(`@22 stderr: ${data}`);
-});
-
-pdftex.on('close', (code) => {
-  console.log(`@26 child process exited with code ${code}`);
-//return;
-  const pdfStream = fs.createReadStream('./style-sheet.pdf')
-//  pdfStream.pipe(process.stout)
-  pdfStream.on('open', function () {
-  // This just pipes the read stream to the response object (which goes to the client)
-    pdfStream.pipe(process.stdout);
+  pdftex.stdout.on('data', (data) => {
+    console.log(`@18 stdout: ${data}`);
   });
 
-});
+  pdftex.stderr.on('data', (data) => {
+    console.error(`@22 stderr: ${data}`);
+  });
 
-s.pipe(pdftex.stdin)
+  pdftex.on('close', async (code) => {
+    console.log(`@26 child process exited with code ${code}`);
+    // stream from xyz.pdf to s3://caltek
+    await move_pdf(md_fname.replace(/.md$/,'.pdf'));
+  });
+
+
+
+//  s1.pipe(pdftex.stdin, {end:false})
+//  s2.pipe(pdftex.stdin, {end:false})
+  s.pipe(pdftex.stdin)
+}
+
+
+// -------------------------------------------------------------------------
+
+const marked = require('marked');
+const renderer = new marked.Renderer();
+
+renderer.heading = function(text,level,raw,slugger) {
+    return `\n\n\\bgroup
+\\${'h'.repeat(level)} ${text}\n\\egroup%${'h'.repeat(level)}
+`
+  }
+
+renderer.code = function(code, infosreading, escaped) {
+//  throw 'break@17'
+  return `\n\\bgroup\\pre\n\\pre${infosreading}\\escaped:{${escaped}}\n${code}}\n\\egroup%pre\n`;
+}
+
+renderer.blockquote = function(quote) {
+  return `\n\\bgroup\\blockquote\n${quote}\n\\egroup%blockquote\n`;
+}
+
+renderer.html = function(html) {
+  console.log(`@25 IGNORE html:`,html)
+  // ignore <iframe>
+  return '';
+}
+
+renderer.hr = function(html) {
+  throw 'break@29'
+}
+
+renderer.list = function(body, ordered, start) {
+  console.log(`@33 `,{body},{ordered},{start});
+  return `\n\\bgroup\\list ${body} \n\\egroup%list\n`;
+}
+
+renderer.listitem = function(text, task, checked) {
+  return `\n\\li\n\\task${task}\\checked${checked}\n${text}`
+}
+
+renderer.checkbox = function(checked) {
+//  throw 'break@41'
+  return `\\checkbox${checked} `
+}
+
+renderer.paragraph = function(text) {
+  return `\n\\par ${text}\n\\par\n`
+}
+
+renderer.table = function(header,body) {
+  throw 'break@49'
+}
+
+renderer.tablerow = function(content) {
+  throw 'break@53'
+}
+
+renderer.tablecell = function(content,flags) {
+  throw 'break@57'
+}
+
+renderer.string = function(text) {
+  throw 'break@61'
+}
+
+
+renderer.em = function(text) {
+  return `{\\it ${text}}`
+}
+
+renderer.strong = function(text) {
+  return `{\\bf ${text}}`
+}
+
+
+renderer.codespan = function(code) {
+  return `{\\codespan ${code}}`
+}
+
+renderer.del = function(text) {
+  return `{\\strike ${text}}`
+}
+
+renderer.link = function(href,title,text) {
+  console.log(`@77 link href:<${href}>
+    title:<${title}>
+    text:<${text}>`)
+  return ''
+}
+
+renderer.image = function(href,title,text) {
+  console.log(`@81 image src:<${href}>
+    title:<${title}>
+    text:<${text}>`)
+  return ''
+}
+
+renderer.text = function(text) {
+//  console.log(`@85 `,{text})
+//  throw 'break85'
+  return text;
+}
+
+
+
+async function get_tex(s3fn) {
+  const {data, LastModified} = await s3.getObject(s3fn)
+  if (!LastModified) throw 'fatal@19'
+
+  const {meta,md} = extract_metadata(data)
+
+  const tex = marked(md, {renderer});
+  return tex
+    .replace(/\&\#39\;/g,"'")
+    .replace(/\&quot\;/g,'"')
+    .replace(/\&mdash\;/g,'--')
+    .replace(/\&\#(\d+)\;/g,'\\cc{$1}')
+    ;
+}
+
+
+async function uploadReadableStream(stream) {
+  const params = {
+    Bucket,
+    Key: Key.replace(/.md$/,'.pdf'),
+    Body: stream,
+    ACL: 'public-read',
+    ContentType: 'application/pdf'
+  };
+  return s3.__s3client.upload(params).promise();
+}
+
+async function move_pdf(s3fn) {
+  const s = fs.createReadStream('xyz.pdf');
+  await uploadReadableStream(s);
+  console.log('@198 copy done.')
+}

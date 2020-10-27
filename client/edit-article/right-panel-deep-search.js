@@ -122,7 +122,7 @@ TP.events({
       }
 
       /* wrong
-      const s3_url = Session.get('s3-url');
+//      const s3_url = Session.get('s3-url');
       const {Bucket, subsite, xid, fn} = utils.extract_subsite(s3_url)
       console.log(`@72 `,{Bucket},{subsite},{xid},{fn})
       */

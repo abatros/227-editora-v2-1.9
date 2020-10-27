@@ -16,9 +16,9 @@ require ('./methods.js')
 import {fix_folder_v2, fix_md_mime_type, migration_v1} from './lib/utils.js'
 require ('./http-server.js')
 
-require ('/server/http-server/museum')
-require ('/server/http-server/caltek')
-require ('/server/http-server/abatros')
+//require ('/server/http-server/museum')
+//require ('/server/http-server/caltek')
+//require ('/server/http-server/abatros')
 
 
 

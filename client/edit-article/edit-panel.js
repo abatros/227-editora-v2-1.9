@@ -13,11 +13,11 @@ let tp = null; // only 1 instance;
 
 Tracker.autorun(function(){
   let s3fn = Session.get('s3-url')
-  ;(_editora_debug_session) && console.log(`${'@'.repeat(30)} GET session.s3-url => <${s3fn}>`)
+  ;(_editora_debug_session) && console.log(`AUTORUN ${'@'.repeat(30)} GET session.s3-url => <${s3fn}>`)
 
   if (!s3fn) {
     ;(verbose >0) && console.log(`@17 [${module.id}] autorun workspace:=<${null}>`)
-    ;(_editora_debug_session) && console.log(`${'@'.repeat(30)} SET session.workspace := <${s3fn}>`)
+    ;(_editora_debug_session) && console.log(`AUTORUN ${'@'.repeat(30)}  SET session.workspace := <${s3fn}>`)
     Session.set('workspace',null);
     // also code mirror...
     return;
@@ -97,7 +97,6 @@ Tracker.autorun(function(){
       console.error(`@38 get-s3object(${s3fn}) (force_create:${force_create})=> `,data.error);
       if ((data.error == 'NoSuchKey')&&(force_create)) {
         const cm_text = await create_document(s3fn); // already done earlier ???????
-        _editora_debug_session.set('code-mirror', ext)
         Session.set('code-mirror',{data:cm_text, ext});
   // Already set      Session.set('s3-url',s3fn); // will re-run this to get the doc.
         // so do we need to set CM ?
@@ -107,10 +106,8 @@ Tracker.autorun(function(){
       //Session.set('workspace',Session.get('s3-url')) // the original.
 //      Session.set('showing-right-panel',true)
       ;(verbose >=0) && console.log(`@100 workspace:=<${s3fn}>`)
-      _editora_debug_session.set('workspace', s3fn)
       Session.set('workspace', s3fn);
       Session.set('panel', 'dir3-panel')
-      _editora_debug_session.set('s3-url', null)
       Session.set('s3-url',null); // to close edit_panel
       // this will activate dir3-panel
       return;
@@ -118,6 +115,7 @@ Tracker.autorun(function(){
 
 
     ;(verbose >0) && console.log(`@37 data for codeMirror is ready.`,{data})
+    add_item_to_history(s3fn);
 
     const {_meta, cm_Value} = adjust_revisionDate(data.data)
 
@@ -128,7 +126,6 @@ Tracker.autorun(function(){
     Session.set('code-mirror',{data:cm_Value, ext});
     Session.set('panel', 'edit-panel')
     ;(verbose >=0) && console.log(`@119 workspace:=<${s3fn}>`)
-    _editora_debug_session.set('workspace', s3fn)
     Session.set('workspace', s3fn); // autorun will fix the name.
   })
 
@@ -331,14 +328,14 @@ function s3fn_to_workspace(s3fn) {
 TP.events({
   /*
   'click .js-toggle-right-panel': (e, tp)=>{
-      const q = Session.get('showing-right-panel')
+//      const q = Session.get('showing-right-panel')
       Session.set('showing-right-panel', !q)
       if (!q) {
         // right panel was closed.
         // we are editing a file
         // must have an extension
         // or (isObject)
-        const s3fn = Session.get('s3-url')
+//        const s3fn = Session.get('s3-url')
         Session.set('workspace', s3fn_to_workspace(s3fn))
         Session.set('showing-right-panel', true);
       }
@@ -355,7 +352,7 @@ TP.events({
   'click .js-directory': (e,tp)=>{
     e.preventDefault(); // to avoid tailing #
 //    publish_article(tp); // save, mk-html, mk-ts-vector
-    const s3fpath = Session.get('edit-s3fpath')
+//    const s3fpath = Session.get('edit-s3fpath')
     assert(s3fpath.endsWith('/index.md'))
     const s3dir = new s3parser(s3fpath).parent().parent().value;
     if (!s3dir) {

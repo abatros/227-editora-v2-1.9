@@ -27,7 +27,6 @@ TP.events({
     function find_user(userId) {
       for (h of hashes) {
         if (sha1(userId) == h) {
-          //Session.set('userId',userId);
           return userId;
           break;
         }
@@ -64,11 +63,11 @@ return;
 
       data.user_config.subsites = subsites;
 
-      Session.set('userId',userId);
-      Session.set('workspaces', subsites);
+//      Session.set('userId',userId);
+//      Session.set('workspaces', subsites);
       ;(verbose >=0) && console.log(`@58 user-profile:=`, data.user_config)
-      Session.set('user-profile', data.user_config);
-      Session.set('search-path', data.user_config.path);
+//      Session.set('user-profile', data.user_config);
+//      Session.set('search-path', data.user_config.path);
 
       const next = Session.get('requested-target');
       if (next) {

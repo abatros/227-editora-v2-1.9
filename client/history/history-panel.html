@@ -1,0 +1,44 @@
+<head>
+  <style media="screen">
+  </style>
+</head>
+
+<template name="history_panel">
+<vbox id="history-panel"
+class="a-panel hidden"
+style="width:1000px; border:3px solid yellow; margin:0;
+_height:100%; height:100vh;
+position:absolute;
+">
+
+
+  {{> right_panel_header}}
+
+  <div class="hbox-qj">
+    <span class="hidden trash-can"
+    style="width:50px;text-align:center; font-size:20px;"><i class="fa fa-trash"></i></span>
+    <h5 style="text-align:center; margin:8px 0;">History</h5>
+    <span></span>
+  </div>
+
+  <vbox style="
+      overflow-y:auto;
+      flex-grow:1;
+      _border: 3px solid orange;
+      font-family:monospace; font-size:12pt; line-height:14pt; padding:5px;
+      ">
+
+    {{#each hlist}}
+    <form name="{{this.fn}}">
+      <hbox class="hbox-qj directory-item" style="font-size:10pt;">
+        <span>
+        <input class="js-checkbox" type="checkbox" value="{{this.fn}}">
+        <button type="submit" style="font-size:12pt;line-height:18pt;font-family:ubuntu;">{{this.fn}}</button>
+        </span>
+        <span style="font-size:11pt; font-family:arial;">{{{this.time}}}</span>
+      </hbox>
+    </form>
+    {{/each}}
+  </vbox>
+</vbox>
+</template>

@@ -378,7 +378,7 @@ throw 'break @259'
 
 
     const {md_path,error:md_not_found=null} = await find_md_path(cmd);
-    console.log(`@66: error:${md_not_found}  md_path:`,md_path)
+    console.log(`@66 error:${md_not_found}  md_path:`,md_path)
   //  if (error2) throw 'fatal'
 
 

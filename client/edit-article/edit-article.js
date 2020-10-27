@@ -13,6 +13,7 @@ import './right-panel-info.js'
 import './right-panel-directory.js'
 import './right-panel-deep-search.js'
 import '/client/find/find-panel.js'
+import '/client/history/history-panel.js'
 
 
 import utils from '/shared/utils.js'
@@ -93,7 +94,7 @@ TP.onRendered(function() {
 TP.helpers({
   flags: ()=>{
     const tp = Template.instance();
-    return tp.data && tp.data.flags()
+    return tp.data && tp.data.flags && tp.data.flags()
   }
 })
 
@@ -105,7 +106,7 @@ TP.events({
   'click .js-directory': (e,tp)=>{
     e.preventDefault(); // to avoid tailing #
 //    publish_article(tp); // save, mk-html, mk-ts-vector
-    const s3fpath = Session.get('edit-s3fpath')
+//    const s3fpath = Session.get('edit-s3fpath')
     assert(s3fpath.endsWith('/index.md'))
     const s3dir = new s3parser(s3fpath).parent().parent().value;
     if (!s3dir) {
@@ -177,8 +178,8 @@ function capture_options(url) {
 FlowRouter.route('/edit', { name: 'edit-article',
   triggerEnter: [
     function(context, redirect) {
-      const web_page = Session.get('web-page');
-      console.log(`triggerEnter web_page:`,Session.get('web-page'))
+//      const web_page = Session.get('web-page');
+//      console.log(`triggerEnter web_page:`,Session.get('web-page'))
 //      if (!web_page) redirect('/')
     }
   ],

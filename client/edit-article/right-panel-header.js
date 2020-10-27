@@ -6,27 +6,6 @@ const TP = Template.right_panel_header;
 TP.onRendered(function() {
 })
 
-/*
-function select_rpanel(tp, x) {
-  let v = [
-    'showing-edit-panel',
-    'showing-info-panel',
-    'showing-dir3-panel',
-    'showing-deep-search-panel'
-  ].filter(it =>{
-    Session.set(it, false)
-    return (x == it)
-  })
-
-  if (v.length == 1) {
-//    Session.set(v[0],true)
-    Session.set('panel',v[0])
-    return;
-  }
-
-  console.error('@18 error in select_rpanel ',{v})
-} **/
-
 
 TP.events({
   'click': (e,tp)=>{
@@ -44,7 +23,12 @@ TP.events({
 //    Session.set(data,true)
 //    select_rpanel(tp, data)
 
-    Session.set('panel',data)
+    console.log(`@26 [${module.id}] panel:=<${data}>`)
+    switch(data) {
+      case 'showing-history-panel' : FlowRouter.go('/history'); break;
+      default:
+      Session.set('panel',data)
+    }
   },
 })
 

@@ -1,6 +1,16 @@
 - url: caltek/books/101-dont-go-where
   require: /server/http-server/caltek
   h1: Don't Go Where I Can't
-- url: caltek/books/102-next-book
-  require: /server/http-server/caltek
-  h1: My second book.
+  package: caltek
+
+- url: caltek/books/102-dont-go
+  require: /server/http-server/subsite
+  h1: Don't Go using subsite
+  package: subsite
+  s3dir: caltek/books/101-dont-go-where
+
+- url: abatros/yellow
+  require: /server/http-server/subsite
+  h1: The Yellow Book
+  package: subsite
+  s3dir: abatros/yellow

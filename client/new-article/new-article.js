@@ -1,8 +1,8 @@
 FlowRouter.route('/new', { name: 'new-article',
   triggerEnter: [
     function(context, redirect) {
-      const web_page = Session.get('web-page');
-      console.log(`triggerEnter web_page:`,Session.get('web-page'))
+//      const web_page = Session.get('web-page');
+//      console.log(`triggerEnter web_page:`,Session.get('web-page'))
 //      if (!web_page) redirect('/')
     }
   ],

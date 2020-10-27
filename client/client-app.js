@@ -29,20 +29,9 @@ function alert(msg) {
 Tracker.autorun(function(){ // this should be in the banner
   const verbose =1;
   const userId = Session.get('userId')
+  if (!userId) return;
 
-  console.log(`@30>>>>>>>>>>>>>>`, Session.userId && Session.userId.curValue)
-
-  ;(verbose >0) && console.log(`@29 [${module.id}] autorun <${userId}>`)
-
-  if (!userId) {
-    Session.set('user-profile', userId)
-    return;
-  }
-
-
-  const tp =null; //// to fix
-
-  console.log(`>>> AUTORUN (userId): <${userId}>`)
+  ;(verbose >0) && console.log(`@29 [${module.id}] autorun userId:<${userId}>`)
 
   Meteor.call('user-profile', userId, (err, user_profile) =>{
     if (err) {alert('sys-'+err); return;}
@@ -51,12 +40,12 @@ Tracker.autorun(function(){ // this should be in the banner
 
     console.log({user_profile})
 
-    tp && tp.data.err_message.set('welcome back...')
+//    tp && tp.data.err_message.set('welcome back...')
     let {subsites} = user_profile;
     subsites = subsites && subsites.split('\n').filter(it=>{return (it.trim() != '')})
     console.log(`@32 `,{subsites});
     if (!subsites) {
-      tp && tp.data.err_message.set('Insuficient privileges.<br>Please ask your admin to allow subsite access')
+      //tp && tp.data.err_message.set('Insuficient privileges.<br>Please ask your admin to allow subsite access')
       return;
     }
 
@@ -95,10 +84,11 @@ Tracker.autorun(function(){ // this should be in the banner
 
 
 
-    console.log(`@57 original request : <${next}>`)
     if (next) {
       console.log(`@58 continuing with original request : <${next}>`)
       FlowRouter.go('/'+next)
+    } else {
+//      console.log(`@57 original request : <${next}>`)
     }
   }) // Meteor.call
 }) // autorun (userId) => user-profile

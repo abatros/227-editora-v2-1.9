@@ -4,8 +4,8 @@ const path = require('path')
 
 // ---------------------------------------------------------------------------
 
-function parse_s3filename(s3fn) {
-  const verbose =0;
+function parse_s3filename(s3fn, o={}) {
+  const {verbose} = o;
 
   // remove protocol if present.
   if (s3fn.startsWith('s3://')) s3fn = s3fn.substring(5);
@@ -68,7 +68,7 @@ function parse_s3filename(s3fn) {
         xid:name,
         base, ext
       }
-      ;(verbose >0) && console.log(`@66 `,{retv})
+      ;(verbose >0) && console.log(`@66 [${module.id}] parse_s3filename =>`,{retv})
       return retv;
     }
   } // ext

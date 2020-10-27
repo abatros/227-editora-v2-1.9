@@ -5,7 +5,7 @@ import './main.html';
 import './client-app.js';
 import './edit-article/edit-article.js'
 import './new-article/new-article.js'
-import './directory/subsite-directory.js'
+//import './directory/subsite-directory.js'
 import './admin-edit/admin-edit.js' // obsolete.
 import './admin/admin.js'
 import './user-admin/user-admin.js'

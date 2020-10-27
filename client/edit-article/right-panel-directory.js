@@ -29,7 +29,7 @@ Tracker.autorun(function(){
   let cwd_ = Session.get('workspace');
   const user_profile = Session.get('user-profile');
 
-  console.log(`@32 LOOP
+  console.log(`AUTORUN @32 LOOP
     workspace <${_mrw}><${cwd_}>`);
 
   console.log(`@32 LOOP user-profile(-1)`,_mrp);
@@ -81,10 +81,13 @@ Tracker.autorun(function(){
       workspace <${cwd_}>
       dir:<${dir}> base:<${base}>
       name:<${name}> ext:<${ext}>
+      --------------------------------------------------
+      We should not be in dir3-panel with (fileName+ext)
+      --------------------------------------------------
       `)
 
 throw 'fatal@47'
-    Session.set('workspace',dir)
+//    Session.set('workspace',dir)
     return;
   }
 
@@ -208,7 +211,7 @@ TP.events({
     Session.set('workspace', s3fn)
 
     /*
-    const fdm = Session.get('full-directory-mode');
+//    const fdm = Session.get('full-directory-mode');
     if (fdm) {
       lookup_directory(tp, s3fn)
     } else {
@@ -276,6 +279,12 @@ TP.events({
           Session.set('workspace',s3fn)
           return;
       }
+
+      /*************************************************************
+
+        here we click on a file NOT directory.
+
+      **************************************************************/
 
       default: {
         ;(verbose >0) && console.log(`@195 edit doc <${s3dir}><${fname}> _Key:<${_Key}>`);

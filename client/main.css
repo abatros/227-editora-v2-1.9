@@ -20,7 +20,7 @@ hbox, .hbox, .hbox-ql {
   flex-wrap: none;
   flex-direction: row;
   align-items: baseline;
-  justify-content: flex-start;  
+  justify-content: flex-start;
 }
 
 .hbox-qr {
@@ -36,10 +36,11 @@ hbox, .hbox, .hbox-ql {
 .hbox-qc {
   box-sizing: border-box;
 		display: flex;
-		flex-wrap: none;
-		margin-right: auto;
-		margin-left: auto;
-		margin-bottom:10px;
+		flex-wrap: nowrap;
+    justify-content: center;
+		_margin-right: auto;
+		_margin-left: auto;
+		_margin-bottom:10px;
 }
 
 .hbox-qj {
