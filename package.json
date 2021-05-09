@@ -21,7 +21,7 @@
     "file-regex": "^3.1.0",
     "find": "^0.3.0",
     "fs-extra": "^8.1.0",
-    "handlebars": "^4.7.6",
+    "handlebars": "^4.7.7",
     "hbs": "^4.1.1",
     "jquery": "^3.4.1",
     "js-yaml": "^3.14.0",
